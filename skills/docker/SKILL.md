@@ -1,6 +1,6 @@
 ---
 name: docker
-description: Hardened multi-stage Docker patterns: distroless non-root runtimes, Debian version alignment between build and runtime, secure compose manifests, BuildKit cache mounts, GitHub Actions multi-arch builds, .dockerignore hygiene, and the preferred Ruby/Bundler base image (ghcr.io/zewelor/ruby). Trigger on: 'Dockerfile', 'compose.yaml', 'docker-compose', 'distroless', 'hardening', 'read_only', 'cap_drop', 'HEALTHCHECK', 'healthcheck', 'buildx', 'multi-arch', 'linux/arm64', '.dockerignore', or when optimizing container builds/CI caches.
+description: "Hardened multi-stage Docker patterns: distroless non-root runtimes, Debian version alignment between build and runtime, secure compose manifests, BuildKit cache mounts, GitHub Actions multi-arch builds, .dockerignore hygiene, and the preferred Ruby/Bundler base image (ghcr.io/zewelor/ruby). Trigger on: 'Dockerfile', 'compose.yaml', 'docker-compose', 'distroless', 'hardening', 'read_only', 'cap_drop', 'HEALTHCHECK', 'healthcheck', 'buildx', 'multi-arch', 'linux/arm64', '.dockerignore', or when optimizing container builds/CI caches."
 ---
 
 # Hardened Multi-Stage Docker Builds
