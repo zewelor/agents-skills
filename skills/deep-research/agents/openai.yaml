@@ -1,0 +1,4 @@
+interface:
+  display_name: "Deep Research"
+  short_description: "Help with Deep Research tasks"
+  default_prompt: "Use $deep-research to generate a structured research prompt for complex decisions."

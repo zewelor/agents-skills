@@ -7,15 +7,6 @@ description: Ruby performance optimization guidelines. This skill should be used
 
 Comprehensive performance optimization guide for Ruby applications, maintained by the community. Contains 42 rules across 8 categories, prioritized by impact to guide automated refactoring and code generation.
 
-## When to Apply
-
-Reference these guidelines when:
-- Writing new Ruby code or gems
-- Optimizing ActiveRecord queries and database access patterns
-- Processing large collections or building data pipelines
-- Reviewing code for memory bloat and GC pressure
-- Configuring Ruby runtime settings for production
-
 ## Rule Categories by Priority
 
 | Priority | Category | Impact | Prefix |
@@ -110,4 +101,3 @@ Read individual reference files for detailed explanations and code examples:
 |------|-------------|
 | [references/_sections.md](references/_sections.md) | Category definitions and ordering |
 | [assets/templates/_template.md](assets/templates/_template.md) | Template for new rules |
-| [metadata.json](metadata.json) | Version and reference information |

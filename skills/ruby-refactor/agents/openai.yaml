@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ruby Refactor"
+  short_description: "Help with Ruby Refactor tasks"
+  default_prompt: "Use $ruby-refactor to refactor Ruby code and improve its design and maintainability."

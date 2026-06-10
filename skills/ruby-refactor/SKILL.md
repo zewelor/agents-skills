@@ -7,15 +7,6 @@ description: Ruby refactoring guidelines from community best practices. This ski
 
 Comprehensive refactoring guide for Ruby applications, maintained by the community. Contains 45 rules across 8 categories, prioritized by impact to guide automated refactoring and code generation.
 
-## When to Apply
-
-Reference these guidelines when:
-- Refactoring Ruby code to reduce complexity and improve design
-- Extracting methods, classes, or value objects from large units
-- Simplifying complex conditionals and deep nesting
-- Reducing coupling between classes and modules
-- Adopting idiomatic Ruby patterns and modern Ruby 3.x features
-
 ## Rule Categories by Priority
 
 | Priority | Category | Impact | Prefix |
@@ -113,4 +104,3 @@ Read individual reference files for detailed explanations and code examples:
 |------|-------------|
 | [references/_sections.md](references/_sections.md) | Category definitions and ordering |
 | [assets/templates/_template.md](assets/templates/_template.md) | Template for new rules |
-| [metadata.json](metadata.json) | Version and reference information |

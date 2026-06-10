@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ruby Optimise"
+  short_description: "Help with Ruby Optimise tasks"
+  default_prompt: "Use $ruby-optimise to find and optimize performance bottlenecks in Ruby code."
