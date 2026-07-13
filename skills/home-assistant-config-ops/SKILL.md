@@ -1,6 +1,6 @@
 ---
 name: home-assistant-config-ops
-description: Safely audit, validate, deploy, and troubleshoot a Home Assistant configuration across Kubernetes, SSH, or local runtimes. Use for read-only HA health/configuration audits, creating or verifying repo-local .deployment_info metadata, checking repository-to-runtime drift, validating YAML or Pyscript changes, copying configuration, reading runtime logs, delivering approved Git revisions, restarting or verifying HA, and documenting repeatable operational methods. Pair with a Home Assistant configuration best-practices skill for YAML, automation, script, helper, and dashboard design review.
+description: Safely audit, validate, deploy, and troubleshoot a Home Assistant configuration across Kubernetes, SSH, or local runtimes. Use for read-only HA health/configuration audits, creating or verifying repo-local .deployment_info metadata, checking repository-to-runtime drift, validating YAML or Pyscript changes, copying configuration, reading runtime logs and redacted automation/script traces, delivering approved Git revisions, restarting or verifying HA, and documenting repeatable operational methods. Pair with a Home Assistant configuration best-practices skill for YAML, automation, script, helper, and dashboard design review.
 ---
 
 # Home Assistant Config Ops
@@ -38,6 +38,8 @@ active HA runtime as separate evidence sources.
   [kubernetes.md](references/kubernetes.md).
 - For SSH or local runtime commands, follow
   [ssh-local.md](references/ssh-local.md).
+- For automation, script, or blueprint behavior debugging, follow
+  [runtime-traces.md](references/runtime-traces.md).
 
 Use current official Home Assistant or tool documentation for version-specific
 syntax and API claims. Do not infer external API health from `check_config`.

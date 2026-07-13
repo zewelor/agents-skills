@@ -40,3 +40,28 @@ Ensure each skill contains the required UI metadata file:
 ### 5. Writing Style and Structure
 - Ensure all instructions are written in the **imperative/infinitive** form (e.g., *Freeze*, *Use*, *Avoid*, *Extract*).
 - Keep reference files under 100 lines where possible. If a reference file exceeds 100 lines, include a table of contents at the top.
+
+## Critical Workflow: Source-First Skill Updates
+
+Treat this repository as the only authoring source for its skills. Never make a
+durable skill change by editing an installed copy under a consumer repository's
+`.agents/skills/` directory.
+
+1. Edit `skills/<skill-name>/` in this repository.
+2. Run the complete pre-commit audit above, inspect the diff, then commit and
+   push the source revision after receiving the required approvals.
+3. In each consumer, verify that the installed skill has no independent local
+   edits, then update only the project-scoped skill:
+
+   ```bash
+   npx skills update <skill-name> -p -y
+   ```
+
+4. Review the installed directory and `skills-lock.json` diff. Verify the
+   source, `skillPath`, and updated hash; compare consumer copies when more than
+   one repository must stay aligned.
+5. Commit consumer updates separately only when explicitly approved. Stop and
+   report instead of overwriting a consumer-local skill divergence.
+
+For `home-assistant-config-ops`, update both
+`~/personal/ha_config` and `~/personal/ha_config_ps` after the source push.

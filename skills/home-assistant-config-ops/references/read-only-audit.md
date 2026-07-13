@@ -25,6 +25,8 @@ Do not infer that an unavailable device is faulty without evidence.
   templates replaced cleanly by native behavior.
 - Check automation concurrency/mode, waits, deprecated constructs, startup
   ordering, async I/O, unavailable inputs, task overlap, and exception paths.
+- Use redacted saved traces for suspicious automation, script, and blueprint
+  behavior; record which real trigger paths remain untested.
 - Confirm REST/external-data failures cannot cause template errors, stale
   derived state, or falsely healthy output.
 - Separate expected custom-integration warnings from actionable fresh errors.
