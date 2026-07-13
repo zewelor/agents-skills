@@ -63,5 +63,12 @@ durable skill change by editing an installed copy under a consumer repository's
 5. Commit consumer updates separately only when explicitly approved. Stop and
    report instead of overwriting a consumer-local skill divergence.
 
-For `home-assistant-config-ops`, update both
-`~/personal/ha_config` and `~/personal/ha_config_ps` after the source push.
+When starting from a consumer repository, determine the authoring source from
+that consumer's `skills-lock.json`. Match the skill entry's `source`,
+`sourceType`, `skillPath`, and optional `ref`; do not infer the source from the
+current working directory or the installed `.agents/skills/` copy.
+
+Update only consumer repositories explicitly placed in scope for the task. Do
+not maintain a hard-coded consumer list in this source repository. Keep source
+provenance in installation metadata rather than adding repository-specific
+paths or URLs to a reusable skill's `SKILL.md` frontmatter or instructions.
