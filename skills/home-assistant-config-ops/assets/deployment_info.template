@@ -1,0 +1,24 @@
+# Deployment Information
+
+- Method: `<Kubernetes|SSH|Local>`
+- Configuration path: `<path>`
+- Git remote: `<remote or not applicable>`
+- Git branch: `<branch or not applicable>`
+- Normal transfer: `<verified method>`
+- Restart strategy: `<verified method>`
+- Production-change fallback: `<verified fallback or none>`
+
+## Method-specific values
+
+- Kubernetes namespace: `<namespace>`
+- Kubernetes workload: `<kind/name>`
+- Kubernetes container: `<container>`
+- Kubernetes pod selector: `<selector>`
+- SSH host alias: `<host alias>`
+- Runtime type/directory: `<service, container, Compose, or local details>`
+
+## Notes
+
+- Source of truth: `<source>`
+- Backup ownership: `<method and owner>`
+- Operational exceptions: `<concise non-secret notes or none>`

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Home Assistant Config Ops"
+  short_description: "Audit and operate Home Assistant config safely"
+  default_prompt: "Use $home-assistant-config-ops to audit, validate, and safely deliver this Home Assistant configuration."
