@@ -11,8 +11,9 @@ restarted?
 
 Collect only relevant values:
 
-- Kubernetes: namespace, workload kind/name, container, config path, pod
-  selector, Git remote/branch, transfer type, and restart strategy.
+- Kubernetes: namespace, workload kind/name, container, config path, Git
+  remote/branch, transfer type, restart strategy, and the smallest stable pod
+  selector needed for exact-pod operations.
 - SSH: host alias, config path, runtime type (service, container, or Compose),
   Git remote/branch where applicable, transfer type, and restart strategy.
 - Local: config path, runtime directory/type, Git remote/branch where
@@ -29,7 +30,9 @@ Use method-specific read-only operations to verify every supplied value:
 - confirm access, target identity, and actual HA version;
 - confirm the config path, Git remote/branch, and worktree status;
 - confirm status and logs are readable;
-- on Kubernetes, resolve a Running/Ready pod from the selector.
+- on Kubernetes, verify single-shot `exec` and logs through the workload
+  target; when a pod selector is recorded, confirm it selects only pods owned
+  by that workload.
 
 If access or a value differs, report the discrepancy and request correction.
 Do not guess, request raw credentials, reload, restart, or save unverified data

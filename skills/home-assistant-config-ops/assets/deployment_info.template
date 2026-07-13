@@ -13,7 +13,7 @@
 - Kubernetes namespace: `<namespace>`
 - Kubernetes workload: `<kind/name>`
 - Kubernetes container: `<container>`
-- Kubernetes pod selector: `<selector>`
+- Kubernetes pod selector for exact-pod operations: `<smallest stable selector>`
 - SSH host alias: `<host alias>`
 - Runtime type/directory: `<service, container, Compose, or local details>`
 
