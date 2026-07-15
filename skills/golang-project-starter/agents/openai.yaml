@@ -1,0 +1,4 @@
+interface:
+  display_name: "Go Project Starter"
+  short_description: "Design minimal, opinionated Go projects"
+  default_prompt: "Use $golang-project-starter to design and bootstrap a minimal Go project."
