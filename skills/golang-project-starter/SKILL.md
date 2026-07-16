@@ -87,6 +87,19 @@ When selected:
 - configure Renovate only for dependency types actually present;
 - justify every runtime dependency during review.
 
+When Docker is selected:
+
+- Create and maintain a root `.dockerignore`.
+- Add a root `Justfile` with this inspection target:
+
+  ```just
+  test_dockerignore:
+    rsync -avn . /dev/shm --exclude-from .dockerignore
+  ```
+
+- Run `just test_dockerignore` and inspect the dry-run file list before accepting
+  container-related changes.
+
 ## 5. Select repo-local Go skills
 
 If the user opts into repo-local agent skills, inspect the current catalog
@@ -167,6 +180,9 @@ only when it provides a useful canonical interface over multiple commands.
 Prefer containerized integration tests when the selected runtime dependency
 requires them, not as a universal default.
 
+Treat the Docker inspection target above as sufficient reason for a `Justfile`
+when Docker is selected.
+
 ## 8. Implement without widening scope
 
 - Build the thinnest working vertical slice first.
@@ -175,6 +191,10 @@ requires them, not as a universal default.
 - Keep package structure shallow until independent responsibilities emerge.
 - Add tests around contracts, concurrency, persistence, and failure modes that
   are actually present.
+- When Docker is present, review `.dockerignore` after every file-layout change,
+  especially after adding root-level files or directories. Add or update the
+  relevant patterns deliberately, run `just test_dockerignore`, and verify the
+  resulting file list before accepting the change.
 - Re-run the agreed acceptance command after corrections.
 - Stop for review at the agreed gate; do not self-approve packages.
 
