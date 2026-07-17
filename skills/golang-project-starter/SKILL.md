@@ -1,6 +1,6 @@
 ---
 name: golang-project-starter
-description: Design and bootstrap small, opinionated Go projects from an idea or early repository. Use when starting a Go service, CLI, worker, or library; turning requirements into a written specification and implementation plan; re-scoping an overdesigned Go starter toward a minimal MVP; or deciding project conventions, dependencies, testing, containers, Renovate, GitHub Actions, and delivery workflow before implementation.
+description: Design and bootstrap small, opinionated Go projects from an idea or early repository. Use when starting a Go service, CLI, worker, or library; turning requirements into a written specification and implementation plan; re-scoping an overdesigned Go starter toward a minimal MVP; or deciding project conventions, dependencies, testing, containers, native Git hooks, Renovate, GitHub Actions, and delivery workflow before implementation.
 ---
 
 # Go Project Starter
@@ -99,6 +99,20 @@ When Docker is selected:
 
 - Run `just test_dockerignore` and inspect the dry-run file list before accepting
   container-related changes.
+
+When local Git hooks are selected:
+
+- Prefer Git's native, tracked `.githooks/` directory and a repository-local
+  `core.hooksPath` over Husky, pre-commit, Lefthook, or another hook manager
+  unless a concrete cross-platform or orchestration requirement justifies one.
+- Add an explicit bootstrap command such as `just hooks-install` that runs
+  `git config --local core.hooksPath .githooks`; Git intentionally does not
+  activate repository-provided hooks automatically after clone.
+- Put a slow complete quality gate such as `just ci` in `pre-push`, not
+  `pre-commit`, so iterative commits remain fast.
+- Keep hosted CI authoritative. Treat local hooks as an early feedback layer,
+  document their installation, and exclude `.githooks/` from Docker build
+  contexts when the hooks are not required by an image.
 
 ## 5. Select repo-local Go skills
 

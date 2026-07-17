@@ -51,6 +51,8 @@ Record durable repository behavior:
 - dependency, image, Action, and Go-tool pinning rules selected by the user;
 - approved repo-local Go skills, their source, and update/review workflow;
 - canonical test, lint, and CI commands once they exist;
+- native Git hook installation and the hook-to-quality-gate mapping when local
+  hooks are selected;
 - protection of generated or agent-owned directories from formatters.
 
 Do not copy the whole specification into `AGENTS.md`. Keep only rules a future
