@@ -1,0 +1,151 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage:
+  miniflux-read categories
+  miniflux-read feeds [category-id]
+  miniflux-read counters
+  miniflux-read unread [limit]
+  miniflux-read category <id> [limit]
+  miniflux-read starred [limit]
+  miniflux-read search <text> [limit]
+  miniflux-read entry <id>
+
+Require MINIFLUX_URL (instance root, without /v1) and MINIFLUX_API_KEY.
+EOF
+}
+
+fail() {
+  printf 'miniflux-read: %s\n' "$*" >&2
+  exit 2
+}
+
+validate_id() {
+  [[ "$1" =~ ^[1-9][0-9]*$ ]] || fail "id must be a positive integer"
+}
+
+validate_limit() {
+  [[ "$1" =~ ^[1-9][0-9]*$ ]] || fail "limit must be an integer from 1 to 100"
+  (( "$1" <= 100 )) || fail "limit must be an integer from 1 to 100"
+}
+
+if [[ "${1:-}" == '-h' || "${1:-}" == '--help' || "${1:-}" == 'help' ]]; then
+  usage
+  exit 0
+fi
+
+[[ -n "${MINIFLUX_URL:-}" ]] || fail "MINIFLUX_URL is not set"
+[[ -n "${MINIFLUX_API_KEY:-}" ]] || fail "MINIFLUX_API_KEY is not set"
+command -v curl >/dev/null || fail "curl is required"
+command -v jq >/dev/null || fail "jq is required"
+
+readonly base_url="${MINIFLUX_URL%/}"
+readonly command="${1:-}"
+
+request() {
+  printf '%s\n' "X-Auth-Token: ${MINIFLUX_API_KEY}" | curl --silent --show-error --fail \
+    --connect-timeout 10 \
+    --max-time 30 \
+    --header @- \
+    "${base_url}$1"
+}
+
+compact_entries() {
+  jq '{
+    total,
+    entries: [
+      .entries[]? | {
+        id, title, url, comments_url, author, published_at, created_at,
+        changed_at, status, starred, reading_time, tags,
+        feed: ((.feed // {}) | {
+          id, title, site_url, feed_url,
+          category: ((.category // {}) | {id, title})
+        })
+      }
+    ]
+  }'
+}
+
+compact_entry() {
+  jq '{
+    id, title, url, comments_url, author, content, published_at, created_at,
+    changed_at, status, starred, reading_time, tags,
+    feed: ((.feed // {}) | {
+      id, title, site_url, feed_url,
+      category: ((.category // {}) | {id, title})
+    })
+  }'
+}
+
+compact_feeds() {
+  jq '[
+    .[]? | {
+      id, title, site_url, feed_url, checked_at, next_check_at, disabled,
+      category: ((.category // {}) | {id, title})
+    }
+  ]'
+}
+
+case "$command" in
+  categories)
+    [[ $# -eq 1 ]] || { usage >&2; exit 2; }
+    request '/v1/categories?counts=true'
+    ;;
+  feeds)
+    [[ $# -le 2 ]] || { usage >&2; exit 2; }
+    if [[ $# -eq 2 ]]; then
+      category_id="$2"
+      validate_id "$category_id"
+      request "/v1/categories/${category_id}/feeds" | compact_feeds
+    else
+      request '/v1/feeds' | compact_feeds
+    fi
+    ;;
+  counters)
+    [[ $# -eq 1 ]] || { usage >&2; exit 2; }
+    request '/v1/feeds/counters'
+    ;;
+  unread)
+    limit="${2:-20}"
+    [[ $# -le 2 ]] || { usage >&2; exit 2; }
+    validate_limit "$limit"
+    request "/v1/entries?status=unread&order=published_at&direction=desc&limit=${limit}" | compact_entries
+    ;;
+  category)
+    [[ $# -ge 2 && $# -le 3 ]] || { usage >&2; exit 2; }
+    category_id="$2"
+    limit="${3:-20}"
+    validate_id "$category_id"
+    validate_limit "$limit"
+    request "/v1/categories/${category_id}/entries?status=unread&order=published_at&direction=desc&limit=${limit}" | compact_entries
+    ;;
+  starred)
+    limit="${2:-20}"
+    [[ $# -le 2 ]] || { usage >&2; exit 2; }
+    validate_limit "$limit"
+    request "/v1/entries?starred=true&order=published_at&direction=desc&limit=${limit}" | compact_entries
+    ;;
+  search)
+    [[ $# -ge 2 && $# -le 3 ]] || { usage >&2; exit 2; }
+    query="$2"
+    limit="${3:-20}"
+    [[ -n "$query" ]] || fail "search text must not be empty"
+    validate_limit "$limit"
+    encoded_query="$(jq -rn --arg value "$query" '$value | @uri')"
+    request "/v1/entries?search=${encoded_query}&order=published_at&direction=desc&limit=${limit}" | compact_entries
+    ;;
+  entry)
+    [[ $# -eq 2 ]] || { usage >&2; exit 2; }
+    entry_id="$2"
+    validate_id "$entry_id"
+    request "/v1/entries/${entry_id}" | compact_entry
+    ;;
+  -h|--help|help|'')
+    usage
+    ;;
+  *)
+    fail "unknown command: ${command}"
+    ;;
+esac

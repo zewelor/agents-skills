@@ -1,0 +1,4 @@
+interface:
+  display_name: "Miniflux Reader"
+  short_description: "Read Miniflux categories and unread entries"
+  default_prompt: "Use $miniflux to inspect my unread Miniflux entries safely."
