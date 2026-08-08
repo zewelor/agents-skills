@@ -64,5 +64,9 @@ scripts/miniflux-read unread 20 | jq -r '.entries[] | [.id, .published_at, .feed
 - Do not call `fetch-content` with `update_content=true`, and do not call any
   endpoint named `refresh`, `mark-all-as-read`, `bookmark`, `save`, `import`,
   `flush`, `create`, `update`, or `delete`.
+- When a user needs an operation that is documented in the official API but
+  absent from `miniflux-read`, explicitly say that the API supports it but this
+  skill does not. Do not bypass the CLI with an ad-hoc HTTP request; ask for
+  approval to add the operation first.
 - Report API errors without echoing the API key. Ask before widening this skill
   beyond read-only access.
