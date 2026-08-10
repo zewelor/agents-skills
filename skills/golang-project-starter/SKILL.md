@@ -94,7 +94,7 @@ When Docker is selected:
 
   ```just
   # Use Docker's own context filtering so `!` rules are evaluated correctly.
-  test_dockerignore:
+  show_dockerignore:
     #!/bin/sh
     set -eu
     LC_ALL=C
@@ -121,7 +121,7 @@ When Docker is selected:
     printf 'Total size:\t%s\n' "$(du -sh "$test_dir/context/context" | awk '{print $1}')"
   ```
 
-- Run `just test_dockerignore` and inspect the filtered file list before
+- Run `just show_dockerignore` and inspect the filtered file list before
   accepting container-related changes.
 
 When Docker and GitHub Actions are both selected:
@@ -129,11 +129,11 @@ When Docker and GitHub Actions are both selected:
 - Use `immanuwell/dockerfile-roast` as the default Dockerfile lint step. Add it
   after checkout; it reports findings as GitHub annotations and fails on error
   findings by default.
-- Follow the major release channel for this Action instead of hardcoding a
-  patch release:
+- Pin the Action to the current release; its optional image tag and Dockerfile
+  input do not need to be repeated:
 
   ```yaml
-  - uses: immanuwell/dockerfile-roast@v1
+  - uses: immanuwell/dockerfile-roast@1.5.0
   ```
 
 - Rely on the default root `Dockerfile` input for a single conventional file.
@@ -248,7 +248,7 @@ when Docker is selected.
   are actually present.
 - When Docker is present, review `.dockerignore` after every file-layout change,
   especially after adding root-level files or directories. Add or update the
-  relevant patterns deliberately, run `just test_dockerignore`, and verify the
+  relevant patterns deliberately, run `just show_dockerignore`, and verify the
   resulting file list before accepting the change.
 - Re-run the agreed acceptance command after corrections.
 - Stop for review at the agreed gate; do not self-approve packages.

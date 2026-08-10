@@ -1,4 +1,4 @@
 interface:
-  display_name: "Go Project Starter"
-  short_description: "Design minimal, opinionated Go projects"
+  display_name: "Golang Project Starter"
+  short_description: "Help with Golang Project Starter tasks"
   default_prompt: "Use $golang-project-starter to design and bootstrap a minimal Go project with Dockerfile linting."
