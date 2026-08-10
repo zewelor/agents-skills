@@ -100,6 +100,23 @@ When Docker is selected:
 - Run `just test_dockerignore` and inspect the dry-run file list before accepting
   container-related changes.
 
+When Docker and GitHub Actions are both selected:
+
+- Use `immanuwell/dockerfile-roast` as the default Dockerfile lint step. Add it
+  after checkout; it reports findings as GitHub annotations and fails on error
+  findings by default.
+- Follow the major release channel for this Action instead of hardcoding a
+  patch release:
+
+  ```yaml
+  - uses: immanuwell/dockerfile-roast@v1
+  ```
+
+- Rely on the default root `Dockerfile` input for a single conventional file.
+  Set `files` explicitly for multiple or non-standard Dockerfile paths. Keep
+  `droast.toml` and rule overrides out of the initial project unless the
+  accepted contract requires them.
+
 When local Git hooks are selected:
 
 - Prefer Git's native, tracked `.githooks/` directory and a repository-local
