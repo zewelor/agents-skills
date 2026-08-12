@@ -1,0 +1,4 @@
+interface:
+  display_name: "Groq Media Transcript"
+  short_description: "Check tools and transcribe media with Groq"
+  default_prompt: "Use $groq-media-transcript to check dependencies first, then transcribe a local file or public media URL with Groq."
