@@ -93,10 +93,12 @@ runtime users, and BuildKit cache mounts. Keep workflow orchestration here.
   pull a private image.
 - Build and smoke-test the native runner platform before publishing a
   multi-platform manifest when this gives useful fast feedback.
-- Configure Buildx cache with both `cache-from` and `cache-to`. Use an explicit
-  scope per image, for example `type=gha,scope=${image_name}`, so separate image
-  builds do not overwrite one shared cache.
-- Use `mode=max` when intermediate build stages should be exported.
+- Configure Buildx cache with both `cache-from` and `cache-to`. Select the backend based on workflow triggers and cache sharing requirements:
+  - Use `type=gha,scope=${image_name}` for branch and PR workflows where builds run on `main` or feature branches and inherit branch cache without extra registry tags or package write permissions.
+  - Use `type=registry,ref=${registry}/${image}:buildcache` when workflows are triggered from release tags (`refs/tags/v*`), release branches, or manual dispatches. GitHub Actions cache does not share across independent tag refs, whereas an OCI cache artifact in GHCR/registry is ref-independent, allowing new releases (`vX.Y.Z`) to reuse cache from previous tags.
+  - Specify the full OCI reference (`ghcr.io/owner/repo:buildcache`) for registry cache and grant the job `packages: write` permissions.
+  - Whenever configuring `type=registry` or switching cache backends, add an inline comment directly next to the cache configuration in the workflow file explaining why that backend was chosen (e.g. noting that tag-triggered builds require registry cache to share layers across release tags).
+- Use `mode=max` when intermediate build stages (downloaded dependencies, compiler caches) should be exported.
 - Make a cache toggle control both restore and export. If it intentionally
   controls only one direction, name it `restore_cache` or `export_cache`.
 - Treat `pull: true` and layer caching as independent: refresh referenced base
