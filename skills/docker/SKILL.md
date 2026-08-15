@@ -1,22 +1,26 @@
 ---
 name: docker
-description: "Hardened multi-stage Docker patterns: distroless non-root runtimes, Debian version alignment between build and runtime, secure compose manifests, BuildKit cache mounts, GitHub Actions multi-arch builds, .dockerignore hygiene, and the preferred Ruby/Bundler base image (ghcr.io/zewelor/ruby). Trigger on: 'Dockerfile', 'compose.yaml', 'docker-compose', 'distroless', 'hardening', 'read_only', 'cap_drop', 'HEALTHCHECK', 'healthcheck', 'buildx', 'multi-arch', 'linux/arm64', '.dockerignore', or when optimizing container builds/CI caches."
+description: "Harden Docker images and Compose configurations with multi-stage Dockerfiles, scratch or distroless non-root runtimes, BuildKit layer and cache-mount hygiene, cross-platform build semantics, .dockerignore rules, Debian alignment, and the preferred Ruby/Bundler base image (ghcr.io/zewelor/ruby). Use for Dockerfile, compose.yaml, docker-compose, scratch, distroless, hardening, read_only, cap_drop, HEALTHCHECK, buildx platform arguments, multi-arch image behavior, linux/arm64, or .dockerignore work. Do not use for GitHub Actions permissions, tokens, action version pinning, release jobs, or workflow-level cache orchestration."
 ---
 
 # Hardened Multi-Stage Docker Builds
 
 Apply to production images, not local dev. See section headers below for the full scope.
 
+Keep the scope limited to Dockerfile structure, build context, BuildKit behavior,
+image contents, runtime hardening, and Compose. Delegate CI trust boundaries,
+permissions, credentials, action references, and cache-backend orchestration to a
+GitHub Actions-specific skill.
+
 ## Workflow
 
-When this skill triggers:
+Follow this workflow:
 
 1. Identify the project language/runtime (Go, Node, Python, Ruby, or other). Pick the matching `deps` pattern below.
-2. Pick the runtime base image: distroless `nonroot` is preferred. Fall back to creating a non-root user only if distroless is not viable.
+2. Pick the smallest viable runtime: scratch for a truly static binary, distroless `nonroot` when runtime files are needed, or an explicit non-root user otherwise.
 3. Apply layer-cache hygiene: copy lockfiles before source, set `BUNDLE_PATH` outside the app dir for Ruby, use `--mount=type=cache` only when there are external dependencies.
-4. For multi-arch in GitHub Actions, use `docker/setup-buildx-action` and `docker/build-push-action` (no standalone `docker buildx create` step needed).
-5. Harden compose: `read_only`, `cap_drop: ALL`, `no-new-privileges`, custom networks with `internal: true` for backend, `deploy.resources.limits` + `restart_policy`, `build.target` for stage selection.
-6. Apply per-stage cleanup in the same RUN: `apt-get clean && rm -rf /var/lib/apt/lists/*`; `npm cache clean --force`; `rm -rf /usr/share/doc /usr/share/man` before the runtime stage.
+4. Harden compose: `read_only`, `cap_drop: ALL`, `no-new-privileges`, custom networks with `internal: true` for backend, `deploy.resources.limits` + `restart_policy`, `build.target` for stage selection.
+5. Apply per-stage cleanup in the same RUN: `apt-get clean && rm -rf /var/lib/apt/lists/*`; `npm cache clean --force`; `rm -rf /usr/share/doc /usr/share/man` before the runtime stage.
 
 ## Multi-Stage Dockerfile Architecture
 
@@ -87,32 +91,26 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
 
 Requires BuildKit (Docker 23+).
 
-## Multi-Architecture Builds (GitHub Actions)
+## Cross-Platform Builds
 
-Multi-arch should be handled inside the GitHub Actions workflow, not as a standalone `docker buildx create` step. `docker/setup-buildx-action` provisions buildx and QEMU transparently.
+Keep compilation on the build platform when the toolchain supports native
+cross-compilation. Use `FROM --platform=$BUILDPLATFORM`, declare only the
+automatic platform arguments the Dockerfile consumes (`TARGETOS`,
+`TARGETARCH`, or `TARGETPLATFORM`), and emit the target artifact explicitly.
 
-Actions are referenced without pinned versions - update them as the upstream releases evolve:
+Require QEMU/binfmt only when a build stage executes target-architecture
+binaries. Do not add emulation for a Go build that runs on `$BUILDPLATFORM` and
+cross-compiles with `GOOS` and `GOARCH`. Buildx can use an existing binfmt
+installation, but setting up a builder does not itself install QEMU.
 
-```yaml
-- uses: docker/setup-buildx-action
-  with:
-    platforms: linux/amd64,linux/arm64
-- uses: docker/build-push-action
-  with:
-    context: .
-    platforms: linux/amd64,linux/arm64
-    push: true
-    tags: ghcr.io/${{ github.repository }}:${{ github.sha }}
-    cache-from: type=gha
-    cache-to: type=gha,mode=max
-```
+Treat base-image freshness and layer caching as separate controls: pulling
+referenced images does not imply a no-cache build.
 
-In the Dockerfile, declare `ARG TARGETPLATFORM` when arch-specific binaries are needed (e.g., different base images for amd64 vs arm64).
+## Minimal Non-Root Runtimes
 
-## Distroless Non-Root Runtimes
+Prefer scratch or Google Distroless over a full OS runtime when the application permits it.
 
-Production containers should prefer Google Distroless bases over full OSes (Debian, Ubuntu, Alpine) to reduce attack surface.
-
+- Truly static binaries: scratch with only the binary and required runtime data such as CA certificates; declare a numeric `USER` such as `65532:65532`.
 - Static binaries (Go, Rust): `gcr.io/distroless/static-debianX:nonroot`.
 - Dynamic binaries or interpreted apps (Node.js, Python): `gcr.io/distroless/base-debianX:nonroot` or language-specific distroless images.
 - Static distroless runtimes have no dynamic linker. Static linking is required: `CGO_ENABLED=0` for Go, static musl/glibc targets for Rust.
@@ -124,14 +122,14 @@ Skip `HEALTHCHECK` in distroless (no `curl`/`wget`/`nc` available); rely on orch
 
 ## Non-Root User Creation (when distroless is not viable)
 
-When distroless is not an option (alpine with musl, slim Debian with shell needed, scratch without a user), create a non-root user explicitly. Always use a numeric UID, never a name, so the same image works across distroless-style base layers.
+When scratch or distroless is not viable and the runtime needs a full OS, create a non-root user explicitly. Use a numeric UID and GID for custom users so the image works consistently across runtimes; official distroless `nonroot` images are the named-user exception.
 
 Debian / Ubuntu:
 
 ```dockerfile
 RUN groupadd -r -g 1001 app && \
     useradd -r -u 1001 -g app -d /nonexistent -s /sbin/nologin app
-USER 1001
+USER 1001:1001
 ```
 
 Alpine:
@@ -139,7 +137,7 @@ Alpine:
 ```dockerfile
 RUN addgroup -g 1001 -S app && \
     adduser -S app -u 1001 -G app
-USER 1001
+USER 1001:1001
 ```
 
 Match this UID with the corresponding `user: "1001:1001"` in compose to avoid bind-mount permission mismatches between dev and prod.

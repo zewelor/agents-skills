@@ -1,0 +1,4 @@
+interface:
+  display_name: "GitHub Actions Maintainer"
+  short_description: "Audit and harden GitHub Actions workflows"
+  default_prompt: "Use $github-actions-maintainer to audit and harden the GitHub Actions workflows in this repository."

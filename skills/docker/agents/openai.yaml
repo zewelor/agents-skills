@@ -1,4 +1,4 @@
 interface:
   display_name: "Docker"
-  short_description: "Help with Docker tasks and workflows"
+  short_description: "Harden Docker images, builds, and Compose"
   default_prompt: "Use $docker to audit or write a secure multi-stage Dockerfile."
