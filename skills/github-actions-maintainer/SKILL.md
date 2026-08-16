@@ -110,6 +110,17 @@ runtime users, and BuildKit cache mounts. Keep workflow orchestration here.
   for `TARGETOS`/`TARGETARCH`.
 - Prove cache behavior from at least two comparable workflow runs. Configuration
   proves wiring; logs showing cache import and cached layers prove reuse.
+- Clean up GHCR packages after image publication in jobs with `packages: write` using `dataaxiom/ghcr-cleanup-action`. Protect all persistent/rolling release channels (e.g. `latest`, `stable`, `edge`) in `exclude-tags`:
+
+  ```yaml
+  - name: Delete old images
+    uses: dataaxiom/ghcr-cleanup-action@d52806a0dc70b430571a37da1fde39733ffd640f # v1.2.2
+    with:
+      keep-n-tagged: 10
+      keep-n-untagged: 10
+      exclude-tags: latest
+      delete-partial-images: true
+  ```
 
 ## Releases and Supply Chain
 
