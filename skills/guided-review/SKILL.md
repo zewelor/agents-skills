@@ -48,7 +48,7 @@ Interpret these commands and their natural-language equivalents as follows:
 | Command | Meaning |
 | --- | --- |
 | `$guided-review` | Detect the relevant change scope, automatically decide whether it can be split, stage the next coherent package when needed, self-review it, validate it, and ask comprehension questions. Review an explicitly supplied full scope without changing Git state. |
-| `$guided-review next` | After the current chunk passed review, validation, and the understanding gate, treat this invocation as fresh commit approval, commit only the reviewed staged diff, and automatically prepare the next chunk when one remains. If no current chunk has passed those gates, run them and wait for a later approval. Do not push. |
+| `$guided-review next` | Treat this invocation as explicit approval to commit the current reviewed package and automatically prepare the next chunk. If it accompanies quiz answers after the review, validation, fingerprint, and questions, evaluate the answers and, when every gate passes, commit and prepare the next chunk in the same turn. If it arrives before those materials, run the gates and wait for later approval. Do not push. |
 | `$guided-review second-opinion` | Run a manually requested independent review using a source selected by the user. |
 | `$guided-review explain` | Explain a selected part of the current scope or produce a concrete scenario/counterexample without changing code. |
 
@@ -238,6 +238,11 @@ Do doprecyzowania:
 - ...
 ```
 
+If the same message contains explicit commit approval and the answers make understanding
+sufficient, report the result and continue through the commit gate in the same turn. Do
+not pause for duplicate confirmation. If understanding is insufficient, do not carry
+that approval forward to a later clarification.
+
 If understanding is insufficient, explain the gap plainly and ask only the smallest
 follow-up needed. Do not keep quizzing indefinitely. If an answer proposes a code or
 scope change, state that it is a separate decision and wait for explicit authorization
@@ -249,9 +254,10 @@ under this workflow.
 
 ## Gate commits and the next package
 
-Keep the prepared package staged and wait after the questions. Apply this commit gate
-only in `prepared_package` mode and for `$guided-review next`; keep `full_scope` review
-read-only. Allow a package commit only when all of these conditions hold:
+Keep the prepared package staged and wait after the questions for answers and explicit
+approval; allow both to arrive in the same message. Apply this commit gate only in
+`prepared_package` mode and for an explicit commit or `next` request; keep `full_scope`
+review read-only. Allow a package commit only when all of these conditions hold:
 
 - the review mode is explicitly `prepared_package`;
 - the index contains exactly one coherent selected package and no known unrelated changes;
@@ -259,11 +265,13 @@ read-only. Allow a package commit only when all of these conditions hold:
 - a staged fingerprint was recorded in the current review session after final validation;
 - the current staged fingerprint matches that recorded value (recompute it immediately
   before committing);
-- the current conversation contains a review and understanding result for that exact
-  staged diff; otherwise repeat the review gate instead of trusting an older session;
-- after receiving the findings, validation result, understanding result, and staged
-  fingerprint, the user explicitly says to commit or invokes `$guided-review next` in a
-  later message; earlier, conditional, or blanket authorization does not count;
+- the current conversation contains a review for that exact staged diff, and the current
+  answers have been evaluated as sufficient; report the understanding result in the same
+  turn before or alongside the commit outcome;
+- after receiving the findings, validation result, staged fingerprint, and comprehension
+  questions, the user explicitly says to commit or invokes `$guided-review next`; allow
+  that request to accompany the answers, but do not count approval given before those
+  materials or unrelated blanket authorization;
 - no unresolved `BLOCKER` finding remains, or the user explicitly acknowledges and
   rejects that finding;
 - the user’s understanding is sufficient;
