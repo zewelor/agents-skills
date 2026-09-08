@@ -129,13 +129,6 @@ When Docker and GitHub Actions are both selected:
 - Use `immanuwell/dockerfile-roast` as the default Dockerfile lint step. Add it
   after checkout; it reports findings as GitHub annotations and fails on error
   findings by default.
-- Pin the Action to the current release; its optional image tag and Dockerfile
-  input do not need to be repeated:
-
-  ```yaml
-  - uses: immanuwell/dockerfile-roast@1.5.0
-  ```
-
 - Rely on the default root `Dockerfile` input for a single conventional file.
   Set `files` explicitly for multiple or non-standard Dockerfile paths. Keep
   `droast.toml` and rule overrides out of the initial project unless the
