@@ -1,58 +1,41 @@
 ---
-title: Avoid Shared Mutable State Between Threads
-impact: MEDIUM
-impactDescription: prevents race conditions and eliminates mutex contention overhead
-tags: conc, threads, mutex, thread-safety
+title: Reduce Measured Contention With Local Results
+tags: conc, threads, mutex
 ---
 
-## Avoid Shared Mutable State Between Threads
+## Reduce Measured Contention With Local Results
 
-Sharing mutable data between threads requires Mutex locks that serialize access, destroying concurrency benefits. Thread-local accumulators merged at the end eliminate contention while preserving correctness.
+Keep a Mutex when a shared invariant requires it. Do not assume that any lock
+eliminates the benefit of concurrency; measure contention first. Use independent
+partial results when the operation can be partitioned without changing results.
 
-**Incorrect (shared counter with Mutex creates serialized bottleneck):**
+Submit bounded batches through the executor chosen by the project. Give each
+worker its own accumulator instead of mutating a global Hash:
 
 ```ruby
-class InventoryAuditor
-  def count_items_by_category(products)
-    totals = Hash.new(0)
-    mutex = Mutex.new
-
-    workers = products.each_slice(100).map do |batch|
-      Thread.new do
-        batch.each do |product|
-          mutex.synchronize do  # Every increment waits for the lock
-            totals[product.category] += 1
-          end
-        end
-      end
-    end
-
-    workers.each(&:join)
-    totals  # Threads spent more time waiting than working
+def count_batch(products)
+  products.each_with_object(Hash.new(0)) do |product, totals|
+    totals[product.category] += 1
   end
 end
 ```
 
-**Correct (thread-local accumulators merged at end):**
+Wait for all worker results and propagate failures before merging them in the
+calling thread. For integer counts, merge partials without shared mutation:
 
 ```ruby
-class InventoryAuditor
-  def count_items_by_category(products)
-    workers = products.each_slice(100).map do |batch|
-      Thread.new do
-        local_totals = Hash.new(0)  # No sharing, no locks needed
-        batch.each do |product|
-          local_totals[product.category] += 1
-        end
-        local_totals
-      end
-    end
-
-    workers
-      .map(&:value)
-      .each_with_object(Hash.new(0)) do |local, merged|
-        local.each { |category, count| merged[category] += count }
-      end
+def merge_counts(partials)
+  partials.each_with_object(Hash.new(0)) do |partial, totals|
+    partial.each { |category, count| totals[category] += count }
   end
 end
 ```
+
+Check Hash iteration order if it is observable; concurrent insertion into a
+shared Hash may have produced a different order. Do not transfer this integer
+sum example to floating-point or non-associative operations without checking
+rounding and ordering. Keep product objects read-only during the work.
+
+Follow [bounded work and error propagation](conc-thread-pool-sizing.md). Do not
+create one thread per batch for an unbounded dataset. Compare against sequential
+counting: removing locks alone does not prove that threads improve throughput.

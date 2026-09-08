@@ -1,15 +1,13 @@
 ---
 title: Reuse Buffers in Loops
-impact: MEDIUM-HIGH
-impactDescription: reduces allocations from O(n) to O(1)
 tags: alloc, buffers, loops, reuse
 ---
 
 ## Reuse Buffers in Loops
 
-Creating a new String or Array inside a loop allocates a fresh object per iteration. Declaring the buffer once outside the loop and clearing it with `.clear` or `.replace` reuses the same memory, dropping allocations from O(n) to O(1).
+Reuse a buffer only when each consumer finishes with its contents before the next mutation and does not retain the object. `output << line` copies the string contents here; storing `line` in an Array would retain the shared object. Measure retained capacity and total allocations: formatting and buffer growth can still allocate. Treat this delimited-text example as limited to fields without commas, quotes, or newlines; use a CSV writer for general CSV.
 
-**Incorrect (allocates a new string per iteration):**
+**Before (allocates a new string per iteration):**
 
 ```ruby
 class CsvExporter
@@ -30,7 +28,7 @@ class CsvExporter
 end
 ```
 
-**Correct (reuses a single buffer):**
+**Alternative (reuses a single buffer):**
 
 ```ruby
 class CsvExporter
@@ -38,7 +36,7 @@ class CsvExporter
     output = +""
     line = +""  # Single allocation, reused across iterations
     orders.each do |order|
-      line.clear  # Resets length to 0, keeps allocated memory
+      line.clear  # Reset contents; do not assume a particular capacity policy
       line << order.id.to_s
       line << ","
       line << order.customer_name
@@ -65,8 +63,11 @@ end
 # Correct -- reuses buffer
 ids = []
 batches.each do |batch|
-  ids.clear  # Resets without deallocating
+  ids.clear  # Reset contents before synchronous consumption
   batch.each { |record| ids << record.id }
   process_ids(ids)
 end
 ```
+
+Keep per-batch arrays if `process_ids` retains them, queues asynchronous work,
+or needs an independently mutable input. Reuse is invalid in those cases.

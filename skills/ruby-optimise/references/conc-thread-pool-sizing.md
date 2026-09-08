@@ -1,63 +1,55 @@
 ---
-title: Size Thread Pools to Match Workload
-impact: MEDIUM
-impactDescription: prevents GVL contention and resource exhaustion
-tags: conc, threads, pool, gvl
+title: Bound Concurrent Work and Propagate Failures
+tags: conc, threads, limits
 ---
 
-## Size Thread Pools to Match Workload
+## Bound Concurrent Work and Propagate Failures
 
-Unbounded thread creation causes memory bloat and excessive GVL contention. A fixed-size thread pool with a work queue keeps resource usage predictable and throughput stable under load.
+Prefer an existing bounded executor when the project has one. Otherwise, a
+bounded batch of threads can be enough for finite I/O work; do not add a queue
+and a persistent pool solely for this example. Bound I/O at the client with
+connection/read timeouts. Ordinary CRuby threads do not make pure Ruby CPU
+work parallel, though native extensions may release the GVL.
 
-**Incorrect (unbounded threads cause resource exhaustion):**
-
-```ruby
-class OrderExportService
-  def export_all(orders)
-    threads = orders.map do |order|
-      Thread.new { generate_pdf(order) }  # 10,000 orders = 10,000 threads
-    end
-
-    threads.each do |t|
-      t.join  # GVL thrashing kills throughput
-    end
-  end
-
-  private
-
-  def generate_pdf(order)
-    # CPU-bound PDF generation competing for GVL
-    PdfGenerator.new(order).render
-  end
-end
-```
-
-**Correct (fixed pool with queue prevents resource exhaustion):**
+For tasks returning one value per input, preserve input order and wait for all
+started tasks before propagating a StandardError. Assume task bodies finish or
+hit their own timeout; do not use this with unbounded blocking operations.
 
 ```ruby
-class OrderExportService
-  POOL_SIZE = Integer(ENV.fetch("EXPORT_THREADS", 5))
+def bounded_map(items, concurrency: 4, &operation)
+  unless concurrency.is_a?(Integer) && concurrency.positive?
+    raise ArgumentError, "concurrency must be a positive Integer"
+  end
+  raise ArgumentError, "operation required" unless operation
 
-  def export_all(orders)
-    queue = Queue.new
-    orders.each { |order| queue << order }
-    POOL_SIZE.times { queue << :done }
-
-    workers = POOL_SIZE.times.map do
-      Thread.new do
-        while (order = queue.pop) != :done
-          generate_pdf(order)
+  items.each_slice(concurrency).flat_map do |batch|
+    workers = []
+    begin
+      batch.each do |item|
+        workers << Thread.new do
+          begin
+            [true, operation.call(item)]
+          rescue StandardError => error
+            [false, error]
+          end
         end
       end
+      outcomes = workers.map(&:value)
+      failed = outcomes.find { |success, _value| !success }
+      raise failed.last if failed
+      outcomes.map(&:last)
+    ensure
+      workers.each(&:join)
     end
-
-    workers.each(&:join)  # Bounded concurrency, predictable memory
-  end
-
-  private
-
-  def generate_pdf(order)
-    PdfGenerator.new(order).render
   end
 end
 ```
+
+Keep the limit independent of input size. This example bounds active work but
+retains its output Array; stream or consume results incrementally if the result
+itself is large. Account for database connections per worker. Do not replace a
+failed result with nil, silently skip work for a zero limit, or leave workers
+running after returning an error.
+
+Test empty input, invalid limits, output ordering (including nil/false), failures,
+and peak active work. Compare the complete workload with sequential execution.

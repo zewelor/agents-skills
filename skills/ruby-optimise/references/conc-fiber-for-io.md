@@ -1,58 +1,27 @@
 ---
-title: Use Fibers for I/O-Bound Concurrency
-impact: MEDIUM
-impactDescription: reduces memory 250x per concurrent task (~4KB vs ~1MB)
-tags: conc, fiber, io, async
+title: Use an Existing Scheduler for Bounded I/O
+tags: conc, fiber, io
 ---
 
-## Use Fibers for I/O-Bound Concurrency
+## Use an Existing Scheduler for Bounded I/O
 
-Fibers provide cooperative concurrency with minimal memory overhead, making them ideal for I/O-bound workloads like HTTP requests, database queries, and file operations. Spawning OS threads for each concurrent I/O task wastes memory and hits OS limits quickly.
+Use fibers only with a scheduler and I/O libraries that cooperate with it.
+Read the locked versions of the scheduler and HTTP/database client before
+writing code; do not introduce Async or another runtime solely because this
+reference mentions fibers.
 
-**Incorrect (one thread per HTTP request exhausts resources):**
+1. Identify I/O wait in the measured path. Keep CPU-heavy work outside the
+   scheduler's thread when it would block all tasks.
+2. Use the installed executor's bounded concurrency and backpressure controls.
+   Do not launch one fiber for every input without a limit.
+3. Preserve input/result ordering and the caller's return type. Await the
+   executor's result; do not return a Task where an Array was returned before.
+4. Bound connection and read waits using the client's supported timeout API.
+5. Consume or close every response body and close the client in `ensure`.
+6. Propagate failures and wait for or cancel outstanding work using the
+   executor's documented lifecycle. Do not replace a failed batch with `[]`.
+7. Test empty input, a failed request, timeouts, ordering, and resource cleanup
+   with a local fake endpoint before comparing representative throughput.
 
-```ruby
-require "net/http"
-
-def fetch_product_prices(product_urls)
-  threads = product_urls.map do |url|
-    Thread.new do  # ~1MB stack per thread, OS limit ~1024 threads
-      uri = URI(url)
-      response = Net::HTTP.get_response(uri)
-      JSON.parse(response.body)
-    end
-  end
-
-  threads.map(&:value)  # Blocks until all complete
-rescue ThreadError => e
-  # "can't create Thread: Resource temporarily unavailable"
-  Rails.logger.error("Thread pool exhausted: #{e.message}")
-  []
-end
-```
-
-**Correct (fibers handle thousands of concurrent I/O operations):**
-
-```ruby
-require "async"
-require "async/http/internet"
-
-def fetch_product_prices(product_urls)
-  Async do
-    internet = Async::HTTP::Internet.new
-    barrier = Async::Barrier.new
-
-    results = product_urls.map do |url|
-      barrier.async do  # ~4KB per fiber, scales to thousands
-        response = internet.get(url)
-        JSON.parse(response.read)
-      end
-    end
-
-    barrier.wait
-    results.map(&:wait)
-  ensure
-    internet&.close
-  end
-end
-```
+Keep a bounded thread implementation if it already meets the requirement.
+Do not promise a fixed memory footprint per fiber or thread across runtimes.

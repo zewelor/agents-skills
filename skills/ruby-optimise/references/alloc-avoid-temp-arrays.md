@@ -1,7 +1,5 @@
 ---
 title: Avoid Temporary Array Creation
-impact: HIGH
-impactDescription: eliminates N intermediate allocations per iteration
 tags: alloc, arrays, temporary, memory
 ---
 
@@ -9,7 +7,7 @@ tags: alloc, arrays, temporary, memory
 
 Splat operators (`*args`) and array-wrapping patterns silently allocate intermediate arrays on every call. In hot paths, this creates thousands of throwaway objects that pressure the GC. Pass arguments directly or use `Array()` only when the input type genuinely varies.
 
-**Incorrect (splat creates a temporary array per call):**
+**Before (splat creates a temporary array per call):**
 
 ```ruby
 class NotificationService
@@ -27,7 +25,7 @@ class NotificationService
 end
 ```
 
-**Correct (pass arguments directly):**
+**Alternative (pass arguments directly):**
 
 ```ruby
 class NotificationService
@@ -41,7 +39,7 @@ end
 
 **Another common pattern -- unnecessary array construction via splat:**
 
-**Incorrect (splat collects into throwaway array):**
+**Before (splat collects into throwaway array):**
 
 ```ruby
 def process_line_items(order)
@@ -52,7 +50,7 @@ def process_line_items(order)
 end
 ```
 
-**Correct (iterate directly):**
+**Alternative (iterate directly):**
 
 ```ruby
 def process_line_items(order)
@@ -61,3 +59,7 @@ def process_line_items(order)
   end
 end
 ```
+
+Assume an Array for the direct line_items iteration. Splat normalization can
+accept nil or a single non-enumerable object; calling each on those inputs is
+not equivalent. Check aliasing if the loop mutates its input.

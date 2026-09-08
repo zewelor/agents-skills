@@ -1,52 +1,49 @@
 ---
-title: Stream Large Files Line by Line
-impact: MEDIUM-HIGH
-impactDescription: O(1) memory vs O(n) — saves GBs on large files
-tags: io, files, streaming, memory
+title: Stream Records With the Same Parser
+tags: io, files, streaming
 ---
 
-## Stream Large Files Line by Line
+## Stream Records With the Same Parser
 
-`File.read` loads the entire file contents into a single string in memory. For a 2 GB CSV, that means 2 GB of RAM consumed before processing begins. `File.foreach` streams one line at a time, keeping memory usage constant regardless of file size.
+Stream input with the same record parser and return contract as the original.
+Do not replace `split("\n")` with chomped lines and assume identical handling
+of blank lines, trailing separators, or CRLF. Use a CSV parser for quoted fields
+and embedded newlines; keep CSV options and encoding unchanged.
 
-**Incorrect (loads entire file into memory):**
+For a CSV with `sku`, `name`, and `price` headers, compare the same import logic.
+Assume each parsed row is valid before writes: streaming moves parsing errors
+later, potentially after earlier writes. Preserve atomicity explicitly when
+malformed input must cause no partial import.
+
+**Before (materialize every parsed row):**
 
 ```ruby
-class ProductImporter
-  def import(path)
-    lines = File.read(path).split("\n")  # entire file loaded into one string, then split into array
-    lines.drop(1).each do |line|
-      columns = line.split(",")
-      Product.create!(
-        sku: columns[0],
-        name: columns[1],
-        price: BigDecimal(columns[2])
-      )
-    end
+require "csv"
+require "bigdecimal"
+
+def import_products(path)
+  CSV.read(path, headers: true).each do |row|
+    Product.create!(sku: row["sku"], name: row["name"], price: BigDecimal(row["price"]))
   end
+  nil
 end
 ```
 
-**Correct (streams line by line with constant memory):**
+**Alternative (stream parsed records):**
 
 ```ruby
-class ProductImporter
-  def import(path)
-    first_line = true
+require "csv"
+require "bigdecimal"
 
-    File.foreach(path, chomp: true) do |line|
-      if first_line
-        first_line = false
-        next
-      end
-
-      columns = line.split(",")
-      Product.create!(
-        sku: columns[0],
-        name: columns[1],
-        price: BigDecimal(columns[2])
-      )
-    end
+def import_products(path)
+  CSV.foreach(path, headers: true) do |row|
+    Product.create!(sku: row["sku"], name: row["name"], price: BigDecimal(row["price"]))
   end
+  nil
 end
 ```
+
+Use the project's installed CSV dependency. Test quoted fields, CRLF, embedded
+newlines, empty files, malformed rows, and cleanup on exceptions. Measure peak
+memory including retained results and record size; streaming is not a bound on
+the size of an individual record.

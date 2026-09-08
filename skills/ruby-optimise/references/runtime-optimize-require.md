@@ -1,46 +1,36 @@
 ---
-title: Optimize Require Load Order
-impact: LOW
-impactDescription: reduces boot time by deferring heavy gem loading
-tags: runtime, require, boot, loading
+title: Defer Only Optional Dependency Loading
+tags: runtime, require, boot
 ---
 
-## Optimize Require Load Order
+## Defer Only Optional Dependency Loading
 
-Loading every gem at boot increases startup time and memory usage, even when most gems are only needed for specific code paths. Deferring heavy dependencies with `require: false` and `autoload` keeps boot fast and memory lean.
+Measure boot time and memory before deferring a dependency. Check that it does
+not register a framework integration, initializer, or required constant at boot.
+Move both the loading cost and possible load failure deliberately; measure the
+first-use latency as well as steady-state behavior.
 
-**Incorrect (all gems loaded eagerly at boot):**
+Keep the change limited to one dependency and all of its actual use paths.
+For an application that already depends on Prawn and only generates PDFs here:
+
+**Before (Bundler loads Prawn during setup):**
 
 ```ruby
-# Gemfile — every gem loads at startup
-gem "rails"
-gem "pg"
-gem "sidekiq"
-gem "prawn"           # PDF generation, 15MB+ memory, rarely used
-gem "rmagick"         # Image processing, loads C extensions at boot
-gem "elasticsearch"   # Only needed by search controller
-gem "grover"          # HTML-to-PDF, loads Puppeteer at require time
-
-# Boot time: ~8 seconds, RSS: ~350MB
-# Every web worker pays the cost even if it never generates a PDF
+# Gemfile
+gem "prawn"
 ```
 
-**Correct (defer heavy gems until first use):**
+**Alternative (load explicitly at the sole use site):**
 
 ```ruby
-# Gemfile — defer gems not needed on every request
-gem "rails"
-gem "pg"
-gem "sidekiq"
-gem "prawn", require: false          # Loaded only when generating PDFs
-gem "rmagick", require: false        # Loaded only for image processing
-gem "elasticsearch", require: false  # Loaded only by search module
-gem "grover", require: false
+# Gemfile
+gem "prawn", require: false
+```
 
-# app/services/invoice_pdf_service.rb
+```ruby
 class InvoicePdfService
   def generate(order)
-    require "prawn"  # First call pays ~200ms, subsequent calls are no-ops
+    require "prawn"
     Prawn::Document.new do |pdf|
       pdf.text "Invoice ##{order.invoice_number}"
       pdf.text "Total: #{order.formatted_total}"
@@ -48,3 +38,7 @@ class InvoicePdfService
   end
 end
 ```
+
+Check web, job, console, and test entry points that use this dependency. Preserve
+Rails autoloading conventions for application constants. Do not mark unrelated
+gems `require: false` without adding and testing their loading paths.

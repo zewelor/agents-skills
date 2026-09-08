@@ -1,15 +1,13 @@
 ---
 title: Use Shovel Operator for String Building
-impact: HIGH
-impactDescription: reduces N string allocations to 0 in loops
 tags: str, concatenation, shovel, allocation
 ---
 
 ## Use Shovel Operator for String Building
 
-The `+` operator creates a new String object for every concatenation, copying both operands into fresh memory. In a loop that processes thousands of records, this means thousands of throwaway allocations. The shovel operator (`<<`) appends directly to the receiver's buffer, growing it in place with amortized O(1) cost.
+Append to a buffer owned exclusively by the method when incremental concatenation is measured to be costly. Appending mutates the receiver and can grow its capacity; it does not eliminate formatting allocations. Preserve input coercion: String#<< accepts an Integer as a codepoint, while String#+ does not. Assume String names and delimiter-free fields in this simplified example; use a CSV writer for general CSV.
 
-**Incorrect (new string allocated on each iteration):**
+**Before (new string allocated on each iteration):**
 
 ```ruby
 def export_products_csv(products)
@@ -30,7 +28,7 @@ def export_products_csv(products)
 end
 ```
 
-**Correct (mutates in place, single buffer grows as needed):**
+**Alternative (mutates in place, single buffer grows as needed):**
 
 ```ruby
 def export_products_csv(products)
@@ -44,7 +42,7 @@ def export_products_csv(products)
     result << product.price.to_s
     result << ","
     result << product.stock.to_s
-    result << "\n"                           # zero intermediate allocations
+    result << "\n"                           # Append to the existing result buffer
   end
 
   result

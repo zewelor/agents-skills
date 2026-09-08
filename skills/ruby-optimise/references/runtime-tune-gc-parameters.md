@@ -1,52 +1,33 @@
 ---
-title: Tune GC Parameters for Your Workload
-impact: LOW-MEDIUM
-impactDescription: reduces GC pause frequency by 30-50% for known allocation patterns
-tags: runtime, gc, tuning, configuration
+title: Measure GC Before Tuning Startup Parameters
+tags: runtime, gc, measurement
 ---
 
-## Tune GC Parameters for Your Workload
+## Measure GC Before Tuning Startup Parameters
 
-Ruby's default GC settings are conservative, optimized for small scripts. Web applications with predictable allocation patterns benefit from pre-allocating heap slots and reducing growth frequency, cutting GC pauses that add latency to every request.
+Measure GC time, collections, allocations, retained heap, process RSS, and
+request latency under representative load before changing settings. Keep the
+existing defaults if GC is not the demonstrated bottleneck.
 
-**Incorrect (default GC settings cause frequent pauses under load):**
-
-```ruby
-# No GC configuration — defaults apply
-# Ruby starts with a small heap and grows incrementally
-# Each request triggers multiple GC cycles as the heap
-# expands to fit the application's actual memory needs
-# Result: 50-100ms p99 spikes from major GC during traffic
-
-# config/puma.rb
-workers ENV.fetch("WEB_CONCURRENCY", 2)
-threads_count = ENV.fetch("RAILS_MAX_THREADS", 5)
-threads threads_count, threads_count
-```
-
-**Correct (tuned GC reduces pause frequency for web workloads):**
+Capture counters around the same workload, without forcing a collection inside
+the measured interval:
 
 ```ruby
-# config/environments/production.rb or container ENV
-# Pre-allocate heap slots per size pool (Ruby 3.3+)
-ENV["RUBY_GC_HEAP_0_INIT_SLOTS"]       ||= "600000"
-ENV["RUBY_GC_HEAP_1_INIT_SLOTS"]       ||= "100000"
-ENV["RUBY_GC_HEAP_2_INIT_SLOTS"]       ||= "50000"
-# Grow heap conservatively to avoid over-allocation
-ENV["RUBY_GC_HEAP_GROWTH_FACTOR"]      ||= "1.1"
-# Allow more allocations between GC runs
-ENV["RUBY_GC_HEAP_FREE_SLOTS_MIN_RATIO"] ||= "0.20"
-ENV["RUBY_GC_HEAP_FREE_SLOTS_MAX_RATIO"] ||= "0.40"
-# Raise threshold before triggering major GC
-ENV["RUBY_GC_MALLOC_LIMIT"]            ||= "64000000"
-ENV["RUBY_GC_OLDMALLOC_LIMIT"]         ||= "64000000"
-
-# Verify settings at boot
-Rails.logger.info("GC stats: #{GC.stat.slice(:heap_available_slots, :major_gc_count)}")
+before = GC.stat
+run_representative_workload
+previous_collections = before.fetch(:count)
+collections = GC.stat(:count) - previous_collections
 ```
 
-**When NOT to use this pattern:**
-- The per-size-pool variables (`RUBY_GC_HEAP_0_INIT_SLOTS`, etc.) require Ruby 3.3+; for Ruby 3.2 and earlier, use the legacy `RUBY_GC_HEAP_INIT_SLOTS`
-- Profile with `GC.stat` under realistic load before choosing values — wrong parameters can increase memory without reducing pauses
+Select parameters from the documentation for the exact Ruby version and GC
+implementation. Treat `RUBY_GC_*` startup variables as process-launch settings;
+do not assign them inside Rails `production.rb` and assume the running collector
+was reconfigured. Remove unsupported variables rather than maintaining an
+unverified cross-version parameter list.
 
-Reference: [Practical Garbage Collection Tuning in Ruby (AppSignal)](https://blog.appsignal.com/2021/11/17/practical-garbage-collection-tuning-in-ruby.html)
+Change one setting at a time in an approved bounded trial. Start a new process,
+check the effective behavior and memory budget, then compare the same workload.
+Record the old launch settings so they can be restored. Do not prescribe fixed
+heap sizes, growth factors, or pause-time improvements without measurements.
+
+Reference: [CRuby 4.0 GC statistics](https://docs.ruby-lang.org/en/4.0/GC.html).

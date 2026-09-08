@@ -1,42 +1,38 @@
 ---
-title: Enable YJIT for Production
-impact: MEDIUM
-impactDescription: 15-25% latency reduction with zero code changes
-tags: runtime, yjit, jit, performance
+title: Evaluate YJIT for the Target Workload
+tags: runtime, yjit, measurement
 ---
 
-## Enable YJIT for Production
+## Evaluate YJIT for the Target Workload
 
-YJIT is Ruby's built-in JIT compiler that compiles frequently-executed methods to native code at runtime. It ships with Ruby 3.1+ and is production-ready since Ruby 3.2, delivering significant latency improvements for web workloads with negligible memory cost.
+Check the installed CRuby build and the application framework's existing JIT
+configuration first. Do not assume YJIT is absent or disabled. Compare warmup,
+steady-state latency, throughput, and process RSS with representative traffic;
+YJIT consumes memory for compiled code and metadata and may not help short jobs.
 
-**Incorrect (default interpreter without JIT compilation):**
+Enable it in the approved startup configuration only after a bounded trial.
+For a Puma application already using a Procfile, compare these launch commands:
 
-```ruby
-# Procfile or deployment config
-# Ruby runs in interpreter-only mode by default
+**Before (existing startup command):**
+
+```text
 web: bundle exec puma -C config/puma.rb
-
-# No JIT compilation, every method call goes through
-# the interpreter on every invocation
-# Hot paths like serialization and routing pay full
-# interpreter overhead on each request
 ```
 
-**Correct (YJIT enabled for native code compilation):**
+**Alternative (explicit YJIT startup flag):**
+
+```text
+web: bundle exec ruby --yjit -S puma -C config/puma.rb
+```
+
+Check the actual application process rather than a separate diagnostic process:
 
 ```ruby
-# Option 1: Environment variable (recommended for containers)
-# Dockerfile or .env
-# RUBY_YJIT_ENABLE=1
-
-# Option 2: Command-line flag
-# Procfile
-web: bundle exec ruby --yjit -S puma -C config/puma.rb
-
-# config/initializers/yjit.rb
-if defined?(RubyVM::YJIT) && RubyVM::YJIT.enabled?
-  Rails.logger.info(
-    "YJIT enabled: #{RubyVM::YJIT.runtime_stats[:compiled_iseq_count]} methods compiled"
-  )
-end
+yjit_enabled = defined?(RubyVM::YJIT) && RubyVM::YJIT.enabled?
 ```
+
+Record the previous launch configuration and restore it if the trial exceeds
+memory or latency limits. Check version-specific stats keys before using them;
+do not log an assumed counter or promise a fixed percentage improvement.
+
+Reference: [CRuby 4.0 YJIT documentation](https://docs.ruby-lang.org/en/4.0/jit/yjit_md.html).

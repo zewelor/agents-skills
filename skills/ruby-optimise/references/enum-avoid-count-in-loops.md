@@ -1,15 +1,13 @@
 ---
 title: Avoid Recomputing Collection Size in Conditions
-impact: MEDIUM
-impactDescription: "O(n) to O(1) per check for non-Array enumerables"
 tags: enum, count, size, performance
 ---
 
 ## Avoid Recomputing Collection Size in Conditions
 
-Using `.count > 0` or `.length > 0` to check for presence forces a full traversal on enumerables that lack a cached size (e.g., ActiveRecord relations, lazy enumerators, custom collections). `.any?` short-circuits on the first match, and `.empty?` avoids computing the total count.
+Use an emptiness check appropriate to the actual receiver. Array#length and blockless Array#count do not traverse the array. Enumerable#any? tests truthiness unless a block is given: `[nil, false].any?` is false despite the array being nonempty. Inspect unloaded ActiveRecord relations and their generated SQL separately.
 
-**Incorrect (full traversal to check presence):**
+**Before (full traversal to check presence):**
 
 ```ruby
 if order.line_items.count > 0            # executes SELECT COUNT(*) on every call
@@ -21,15 +19,15 @@ if pending.count == 0                     # already an array, but reads less cle
   notify_admin("No pending users")
 end
 
-while unprocessed_jobs.count > 0          # O(n) recount on every loop iteration
+while unprocessed_jobs.count > 0          # Array count is constant-time; this is a clarity change
   process(unprocessed_jobs.shift)
 end
 ```
 
-**Correct (short-circuit presence checks):**
+**Alternative (short-circuit presence checks):**
 
 ```ruby
-if order.line_items.any?                  # SELECT 1 ... LIMIT 1, stops immediately
+if order.line_items.any?                  # Check SQL for the installed Rails version and loading state
   apply_discount(order)
 end
 

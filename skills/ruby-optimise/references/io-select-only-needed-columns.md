@@ -1,7 +1,5 @@
 ---
 title: Select Only Needed Columns
-impact: HIGH
-impactDescription: reduces memory allocation and query transfer time by 50-90%
 tags: io, select, pluck, activerecord, memory
 ---
 
@@ -9,7 +7,7 @@ tags: io, select, pluck, activerecord, memory
 
 Loading full ActiveRecord objects when you only need one or two columns wastes memory on attribute storage, type casting, and object overhead. Use `.select` for partial models or `.pluck` when you only need raw values without ActiveRecord instances.
 
-**Incorrect (loads every column into full ActiveRecord objects):**
+**Before (loads every column into full ActiveRecord objects):**
 
 ```ruby
 class NewsletterService
@@ -24,7 +22,7 @@ class NewsletterService
 end
 ```
 
-**Correct (loads only the columns needed):**
+**Alternative (loads only the columns needed):**
 
 ```ruby
 class NewsletterService
@@ -37,3 +35,5 @@ class NewsletterService
   end
 end
 ```
+
+Check that model readers are ordinary attributes: `pluck` bypasses custom Ruby readers and object initialization callbacks. Preserve ordering and nil values. Partial models can raise on access to unloaded fields. Verify SQL and type casting against the installed Rails version.

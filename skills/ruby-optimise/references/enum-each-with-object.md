@@ -1,15 +1,13 @@
 ---
 title: Use each_with_object Over inject for Building Collections
-impact: MEDIUM
-impactDescription: eliminates common accumulator-return bugs and improves readability
 tags: enum, each-with-object, inject, reduce
 ---
 
 ## Use each_with_object Over inject for Building Collections
 
-When building a hash or array with `inject`, each iteration must explicitly return the accumulator. Forgetting to return it (e.g., using `merge` instead of `merge!`, or omitting the hash at the end) silently produces wrong results. `each_with_object` passes the same mutable object throughout, eliminating this class of bugs and producing cleaner code.
+When building a hash or array with `inject`, each iteration must explicitly return the accumulator. Forgetting to return it can produce an invalid accumulator. Returning a new hash from `merge` is valid, but allocates another hash. `each_with_object` passes the same mutable object throughout, eliminating this class of bugs and producing cleaner code.
 
-**Incorrect (must remember to return accumulator on every iteration):**
+**Before (must remember to return accumulator on every iteration):**
 
 ```ruby
 products_by_sku = catalog.inject({}) do |hash, product|
@@ -23,14 +21,14 @@ order_totals = line_items.inject({}) do |totals, item|
 end
 ```
 
-**Correct (mutates single object in place, no return needed):**
+**Alternative (mutates single object in place, no return needed):**
 
 ```ruby
 products_by_sku = catalog.each_with_object({}) do |product, hash|
   hash[product.sku] = product  # Accumulator is always the same object
 end
 
-order_totals = line_items.each_with_object(Hash.new(0)) do |item, totals|
-  totals[item.order_id] += item.price
+order_totals = line_items.each_with_object({}) do |item, totals|
+  totals[item.order_id] = totals.fetch(item.order_id, 0) + item.price
 end
 ```

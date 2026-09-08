@@ -1,15 +1,13 @@
 ---
 title: Avoid Unnecessary Object Duplication
-impact: CRITICAL
-impactDescription: eliminates redundant allocations in hot paths
 tags: alloc, dup, clone, memory
 ---
 
 ## Avoid Unnecessary Object Duplication
 
-Calling `.dup` or `.clone` inside loops creates a new heap object per iteration, multiplying GC pressure linearly with the collection size. Freeze shared objects once and reference them directly, or restructure the logic to avoid duplication entirely.
+Calling `.dup` or `.clone` inside loops creates a new heap object per iteration, multiplying GC pressure linearly with the collection size. Share a frozen object only when callers require neither independent mutable copies nor distinct identity. Preserve `dup` otherwise; freezing is a contract change when mutation was supported.
 
-**Incorrect (allocates a new object per iteration):**
+**Before (allocates a new object per iteration):**
 
 ```ruby
 class OrderExporter
@@ -27,11 +25,11 @@ class OrderExporter
 end
 ```
 
-**Correct (zero per-iteration allocations):**
+**Alternative (share only the read-only header):**
 
 ```ruby
 class OrderExporter
-  HEADER_TEMPLATE = ["Order ID", "Customer", "Total", "Status"].freeze
+  HEADER_TEMPLATE = ["Order ID", "Customer", "Total", "Status"].map(&:freeze).freeze
 
   def export(orders)
     rows = []
@@ -46,5 +44,5 @@ end
 
 **When `.dup` IS appropriate:**
 - When the caller will mutate the returned object
-- When building a modified copy from a template (but do it outside the loop)
+- When building independent modified copies from a template, including inside a loop
 - When passing data across thread boundaries that requires isolation

@@ -1,4 +1,4 @@
 interface:
   display_name: "Docker"
-  short_description: "Harden Docker images, builds, and Compose"
-  default_prompt: "Use $docker to audit or write a secure multi-stage Dockerfile."
+  short_description: "Build images and configure container runtime"
+  default_prompt: "Use $docker to configure this container runtime or improve its image build within the requested scope."

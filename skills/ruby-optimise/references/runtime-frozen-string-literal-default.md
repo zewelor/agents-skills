@@ -1,56 +1,39 @@
 ---
-title: Set Frozen String Literal as Project Default
-impact: LOW-MEDIUM
-impactDescription: reduces string allocations across entire codebase
-tags: runtime, frozen, strings, configuration
+title: Adopt Frozen Literals Without Breaking Mutation
+tags: runtime, frozen, strings
 ---
 
-## Set Frozen String Literal as Project Default
+## Adopt Frozen Literals Without Breaking Mutation
 
-Every unadorned string literal in Ruby allocates a new object. Freezing string literals by default eliminates these redundant allocations project-wide, reducing GC pressure. Relying on per-file pragma comments is error-prone and inconsistent. See [Enable Frozen String Literals](str-frozen-literals.md) for per-file details and the `+""` escape hatch.
+Prefer the existing project convention. Add the per-file magic comment only
+after checking whether returned literals or local buffers must remain mutable.
+Do not describe ordinary constant lookup as allocating a new object: a constant
+already refers to its assigned value. Interpolated strings and operations such
+as concatenation can still allocate.
 
-**Incorrect (relying on per-file pragma comments is inconsistent):**
+Place the magic comment at the start of the Ruby file. Preserve a mutable return
+value with unary `+` when that is the method's contract:
 
 ```ruby
-# Some files have the pragma, most don't
-# app/services/order_service.rb
-# frozen_string_literal: true  (easy to forget in new files)
+# frozen_string_literal: true
 
-class OrderService
-  STATUS_PENDING = "pending"  # Frozen only if pragma present
-
-  def status_label(order)
-    "Order ##{order.id}: #{order.status}"  # New allocation every call
-  end
-end
-
-# app/models/product.rb
-# (no pragma — developer forgot)
-class Product
-  DEFAULT_CURRENCY = "USD"  # New object allocated every reference
+def initial_status
+  +"pending"
 end
 ```
 
-**Correct (enforce frozen strings project-wide):**
+If the project already uses RuboCop, express the selected convention in its
+existing configuration; do not install another linter solely for this rule:
 
-```ruby
-# .rubocop.yml — enforce the pragma on every file
+```yaml
 Style/FrozenStringLiteralComment:
   Enabled: true
   EnforcedStyle: always
-
-# Alternatively, set via Ruby flag in Procfile or Dockerfile
-# ruby --enable-frozen-string-literal app.rb
-# Or RUBYOPT="--enable-frozen-string-literal"
-
-# app/services/order_service.rb
-# frozen_string_literal: true
-
-class OrderService
-  STATUS_PENDING = "pending"  # Shared frozen instance
-
-  def status_label(order)
-    +"Order ##{order.id}: #{order.status}"  # Unary + for mutable when needed
-  end
-end
 ```
+
+Check mutation through aliases, callers, `<<`, `replace`, and `force_encoding`.
+Run the affected tests with the pragma enabled. Avoid a process-wide Ruby flag
+as a shortcut: it can affect dependency files as well as application files.
+Treat that rollout as a separately scoped compatibility change.
+
+See [per-file frozen literals](str-frozen-literals.md).

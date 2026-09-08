@@ -1,24 +1,24 @@
 ---
 title: Avoid method_missing in Hot Paths
-impact: MEDIUM-HIGH
-impactDescription: method_missing is 2-10x slower than direct dispatch
 tags: meth, method-missing, dispatch, performance
 ---
 
 ## Avoid method_missing in Hot Paths
 
-Ruby's `method_missing` bypasses the method lookup cache and triggers a full method resolution on every call. In hot paths this overhead compounds quickly, making it 2-10x slower than a direct method call. Generating real methods with `define_method` gives the VM a concrete dispatch target it can cache and optimize.
+Consider explicit readers for a fixed schema when profiling shows dynamic dispatch matters. Require all four symbol keys in the example and treat zero-argument reads as the supported API. Keep dynamic access when keys can appear later; generated readers change reflection and invalid-call behavior. Do not claim a universal dispatch/JIT multiplier.
 
-**Incorrect (full method resolution on every access):**
+**Before (full method resolution on every access):**
 
 ```ruby
 class UserProfile
   def initialize(attrs)
+    required = %i[email name role department]
+    raise ArgumentError, "expected fixed profile schema" unless attrs.keys.sort == required.sort
     @attrs = attrs
   end
 
   def method_missing(name, *args)
-    if @attrs.key?(name)
+    if args.empty? && @attrs.key?(name)
       @attrs[name]  # Triggers full method lookup chain every time
     else
       super
@@ -33,17 +33,19 @@ end
 # In a request loop — method_missing fires on each iteration
 users.each do |user|
   profile = UserProfile.new(user)
-  profile.email  # No cached dispatch, 2-10x slower per call
+  profile.email  # Dynamic reader for the fixed schema
 end
 ```
 
-**Correct (generates real methods the VM can cache):**
+**Alternative (generates real methods the VM can cache):**
 
 ```ruby
 class UserProfile
   ATTRIBUTES = %i[email name role department].freeze
 
   def initialize(attrs)
+    required = %i[email name role department]
+    raise ArgumentError, "expected fixed profile schema" unless attrs.keys.sort == required.sort
     @attrs = attrs
   end
 

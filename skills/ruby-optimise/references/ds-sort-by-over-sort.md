@@ -1,15 +1,13 @@
 ---
 title: Use sort_by Instead of sort with Block
-impact: MEDIUM
-impactDescription: 2-5x faster for large collections via Schwartzian transform
 tags: ds, sorting, sort-by, performance
 ---
 
 ## Use sort_by Instead of sort with Block
 
-`sort` with a comparison block calls the block O(n log n) times, recomputing the sort key on every comparison. `sort_by` computes each key exactly once (Schwartzian transform), then sorts by the cached values. For collections where the key extraction is non-trivial (attribute access, string operations, method calls), `sort_by` is 2-5x faster.
+Cache sort keys only when key extraction is pure and stable for the sort. Compare the saved key calculations against the extra storage. Preserve the comparison and any required tie-breaking; neither a fixed speedup nor stable ordering of equal keys is guaranteed by this transformation.
 
-**Incorrect (key recomputed on every comparison):**
+**Before (key recomputed on every comparison):**
 
 ```ruby
 products = catalog.sort { |a, b|
@@ -21,7 +19,7 @@ orders = user.orders.sort { |a, b|
 }
 ```
 
-**Correct (key computed once per element):**
+**Alternative (key computed once per element):**
 
 ```ruby
 products = catalog.sort_by { |product|
@@ -37,6 +35,8 @@ orders = user.orders.sort_by(&:created_at)  # Single pass for key extraction
 # Numeric keys — negate
 products.sort_by { |p| -p.price }
 
-# Non-numeric keys — reverse after sort
+# Non-numeric keys — use only when reversing ties is acceptable
 products.sort_by { |p| p.name.downcase }.reverse
 ```
+
+Specify a tie-breaker when equal-key order matters. Reversing an ascending result also reverses ties; it is not a general substitute for a descending comparator.

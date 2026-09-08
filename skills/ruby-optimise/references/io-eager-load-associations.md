@@ -1,15 +1,13 @@
 ---
 title: Eager Load ActiveRecord Associations
-impact: HIGH
-impactDescription: eliminates N+1 queries, reduces from 2N+1 to 3 queries
 tags: io, eager-loading, n-plus-one, activerecord
 ---
 
 ## Eager Load ActiveRecord Associations
 
-Accessing associations inside a loop without eager loading fires a separate SQL query per record. For 100 orders with comments, this means 101 queries instead of 2. Use `includes` to load all associated records in a single additional query.
+Inspect query logs for associations loaded or counted per row. In this example both comments and line_items can add a query for each order. Choose preloading based on the actual association type, scopes, and required fields; `includes` may use separate queries or a join, so verify rather than promising a fixed query count.
 
-**Incorrect (fires a query per iteration):**
+**Before (fires a query per iteration):**
 
 ```ruby
 class OrderSummaryService
@@ -28,7 +26,7 @@ class OrderSummaryService
 end
 ```
 
-**Correct (three queries total regardless of record count):**
+**Alternative (preload the associations used by the loop):**
 
 ```ruby
 class OrderSummaryService
@@ -48,3 +46,5 @@ class OrderSummaryService
   end
 end
 ```
+
+Measure memory as well as SQL count. Loading every line_item merely to count them may cost more than a counter cache or grouped count; select that alternative only after checking consistency requirements.

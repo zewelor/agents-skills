@@ -1,15 +1,13 @@
 ---
 title: Chain gsub Calls into a Single Replacement
-impact: MEDIUM
-impactDescription: reduces N string allocations and regex scans to 1
 tags: str, gsub, regex, replacement
 ---
 
 ## Chain gsub Calls into a Single Replacement
 
-Each `.gsub` call scans the entire string and allocates a new copy with the substitutions applied. Chaining N calls means N full scans and N intermediate strings. A single `.gsub` with a Regexp union and a replacement hash performs one scan and one allocation, doing the same work in a fraction of the time.
+Combine substitutions only when matches are independent and later passes do not need to process text produced by earlier passes. Preserve encoding, match precedence, and replacement semantics. Measure the hot path instead of assuming a speedup. In the HTML example, escaping `&` first makes the single-pass replacement equivalent for the five listed characters.
 
-**Incorrect (each gsub scans and allocates a new string):**
+**Before (each gsub scans and allocates a new string):**
 
 ```ruby
 def sanitize_user_input(raw_input)
@@ -31,7 +29,7 @@ def normalize_product_slug(name)
 end
 ```
 
-**Correct (single scan with hash replacement or combined regex):**
+**Alternative (single scan with hash replacement or combined regex):**
 
 ```ruby
 HTML_ESCAPE = { "&" => "&amp;", "<" => "&lt;", ">" => "&gt;",
@@ -43,7 +41,11 @@ def sanitize_user_input(raw_input)
 end
 
 def normalize_product_slug(name)
-  name.downcase.gsub(/[^\w-]+/, "-")  # one pass: lowercase then replace all non-word sequences
-      .delete_prefix("-").delete_suffix("-")
+  # Keep dependent passes: removing punctuation can create adjacent hyphens.
+  name.gsub(/\s+/, "-").gsub(/[^\w-]/, "").gsub(/--+/, "-").downcase
 end
 ```
+
+Preserve the slug contract: `"a.b"` becomes `"ab"`, `"a &- b"` becomes
+`"a-b"`, and leading/trailing hyphens remain. Replacing all punctuation with
+hyphens or trimming them is a behavior change, not an equivalent optimization.

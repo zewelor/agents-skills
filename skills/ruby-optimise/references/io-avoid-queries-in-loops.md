@@ -1,42 +1,45 @@
 ---
-title: Avoid Database Queries Inside Loops
-impact: HIGH
-impactDescription: reduces N queries to 1 bulk query
-tags: io, loops, bulk, queries, activerecord
+title: Bulk Load Without Losing Lookup Semantics
+tags: io, bulk, queries
 ---
 
-## Avoid Database Queries Inside Loops
+## Bulk Load Without Losing Lookup Semantics
 
-Issuing a `find` or `where` call inside a loop sends a separate SQL query per iteration. For 200 IDs, that is 200 round trips to the database. Load all records in a single bulk query and index them for O(1) lookup.
+Bulk-load records only after checking ID types, missing IDs, duplicate input,
+ordering, snapshot consistency, and side-effect timing. `where` omits missing
+records; `find` raises. Do not replace a missing lookup with nil dereferencing
+or silently skip it.
 
-**Incorrect (one query per iteration):**
+For a bounded read-only batch of existing integer IDs, preserve requested order
+and duplicates while computing labels from pure model readers:
+
+**Before (one lookup for each input ID):**
 
 ```ruby
-class OrderFulfillmentService
-  def fulfill(order_ids)
-    order_ids.each do |id|
-      order = Order.find(id)                 # SELECT * FROM orders WHERE id = ? (per id)
-      product = Product.find(order.product_id)  # SELECT * FROM products WHERE id = ? (per order)
-      ship(order, product)
+def order_labels(order_ids)
+  order_ids.map { |id| Order.find(id).label }
+end
+```
+
+**Alternative (one query for the same bounded batch):**
+
+```ruby
+def order_labels(order_ids)
+  orders = Order.where(id: order_ids).index_by(&:id)
+  order_ids.map do |id|
+    order = orders.fetch(id) do
+      raise ActiveRecord::RecordNotFound, "Order not found: #{id}"
     end
+    order.label
   end
 end
 ```
 
-**Correct (two bulk queries, then in-memory lookup):**
+Check exception metadata/message requirements: the explicit error above
+preserves the class, not ActiveRecord's exact generated exception. Normalize
+external IDs at the existing validation boundary rather than assuming string
+IDs match integer hash keys. For a large input, use bounded batches respecting
+the database parameter limit and required snapshot semantics.
 
-```ruby
-class OrderFulfillmentService
-  def fulfill(order_ids)
-    orders = Order.where(id: order_ids).index_by(&:id)
-    product_ids = orders.values.map(&:product_id).uniq
-    products = Product.where(id: product_ids).index_by(&:id)
-
-    order_ids.each do |id|
-      order = orders[id]
-      product = products[order.product_id]
-      ship(order, product)
-    end
-  end
-end
-```
+Do not apply this example blindly around shipping, billing, callbacks, or other
+writes: eager loading can change which effects happen before a later failure.

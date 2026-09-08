@@ -1,15 +1,13 @@
 ---
 title: Use String Interpolation Over Concatenation
-impact: MEDIUM-HIGH
-impactDescription: single allocation vs N intermediate strings
 tags: str, interpolation, concatenation, allocation
 ---
 
 ## Use String Interpolation Over Concatenation
 
-Each `+` between strings allocates and copies an intermediate result. With four fragments you get three throwaway strings before the final one. Interpolation compiles to a single `String#new` that sizes the buffer once and fills it in order, producing exactly one object regardless of how many expressions are embedded.
+Prefer interpolation for clarity when the embedded values have the intended string representation. Check coercion: `+` expects string-compatible operands, while interpolation calls `to_s` and can silently accept nil or another type. Do not replace the former when its TypeError is part of input validation. Measure actual allocations; interpolated expressions and conversions can allocate too.
 
-**Incorrect (intermediate string per concatenation):**
+**Before (intermediate string per concatenation):**
 
 ```ruby
 def order_summary(user, order)
@@ -25,7 +23,7 @@ def product_url(product)
 end
 ```
 
-**Correct (single allocation per string):**
+**Alternative (interpolation for string-valued inputs):**
 
 ```ruby
 def order_summary(user, order)

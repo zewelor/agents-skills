@@ -1,7 +1,5 @@
 ---
 title: Use Lazy Initialization for Expensive Objects
-impact: HIGH
-impactDescription: defers allocation until needed, reduces startup overhead
 tags: alloc, lazy, initialization, memoization
 ---
 
@@ -9,7 +7,7 @@ tags: alloc, lazy, initialization, memoization
 
 Eagerly building expensive objects in `initialize` forces allocation even when those objects are never accessed. Lazy initialization with `||=` defers the cost until first use, keeping object construction fast and memory footprint low for unused code paths.
 
-**Incorrect (allocates everything upfront):**
+**Before (allocates everything upfront):**
 
 ```ruby
 class OrderProcessor
@@ -30,7 +28,7 @@ class OrderProcessor
 end
 ```
 
-**Correct (allocates only when first accessed):**
+**Alternative (allocates only when first accessed):**
 
 ```ruby
 class OrderProcessor

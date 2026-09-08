@@ -1,15 +1,13 @@
 ---
 title: Freeze Constant Collections
-impact: CRITICAL
-impactDescription: prevents repeated allocation of identical objects
 tags: alloc, freeze, constants, immutable
 ---
 
 ## Freeze Constant Collections
 
-Ruby re-evaluates array and hash literals assigned to constants each time they are referenced in certain contexts. Without `.freeze`, accidental mutation can corrupt shared state, and the interpreter cannot optimize access. Freezing enables the VM to reuse the same object safely.
+Freeze constants to prevent accidental mutation, not to avoid reallocation on lookup: reading a constant already returns the assigned object. Freeze nested mutable members separately when required. Treat the filter example as a bug fix for shared state; it deliberately stops mutating `DEFAULT_FILTERS`.
 
-**Incorrect (mutable constants, risk of corruption and extra allocations):**
+**Before (mutable constants, risk of shared-state corruption):**
 
 ```ruby
 class ProductCatalog
@@ -29,11 +27,11 @@ class ProductCatalog
 end
 ```
 
-**Correct (frozen constants, immutable and safe):**
+**Alternative (frozen constants, immutable and safe):**
 
 ```ruby
 class ProductCatalog
-  ALLOWED_CATEGORIES = ["electronics", "clothing", "home", "garden"].freeze
+  ALLOWED_CATEGORIES = ["electronics", "clothing", "home", "garden"].map(&:freeze).freeze
   DEFAULT_FILTERS = { in_stock: true, min_rating: 3.0 }.freeze
   SORT_OPTIONS = [:price_asc, :price_desc, :newest, :rating].freeze
 

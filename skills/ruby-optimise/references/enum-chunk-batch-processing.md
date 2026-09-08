@@ -1,15 +1,13 @@
 ---
 title: Use each_slice for Batch Processing
-impact: MEDIUM
-impactDescription: O(batch) memory vs O(n) for full dataset
 tags: enum, batch, each-slice, memory
 ---
 
 ## Use each_slice for Batch Processing
 
-Loading an entire dataset into memory before processing risks exhausting available RAM on large tables. `each_slice` breaks the collection into fixed-size batches, keeping only one batch in memory at a time and allowing the garbage collector to reclaim previous batches between iterations.
+Use a streaming source before grouping into bounded batches. `each_slice` does not release an already materialized source Array or turn an ActiveRecord relation into batched SQL. Use Rails batch APIs for database records after checking cursor order, concurrent changes, and retry semantics.
 
-**Incorrect (loads all records then processes):**
+**Before (loads all records then processes):**
 
 ```ruby
 users = User.where(subscribed: true).to_a  # loads entire result set into memory
@@ -24,7 +22,7 @@ products.each do |product|
 end
 ```
 
-**Correct (processes in fixed-size batches):**
+**Alternative (processes in fixed-size batches):**
 
 ```ruby
 User.where(subscribed: true).find_each(batch_size: 1000) do |user|
@@ -32,7 +30,7 @@ User.where(subscribed: true).find_each(batch_size: 1000) do |user|
 end
 
 Product.all.find_in_batches(batch_size: 1000) do |batch|
-  SearchIndex.bulk_update(batch)            # only 1000 records in memory at a time
+  batch.each { |product| SearchIndex.update(product) }  # Keep the original operation.
 end
 
 # For non-ActiveRecord enumerables, use each_slice
@@ -40,3 +38,5 @@ large_csv_rows.each_slice(500) do |batch|
   ImportService.process(batch)
 end
 ```
+
+Replace per-record operations with a bulk API only after comparing callbacks, failure/partial-success behavior, ordering, and return contracts. A bulk method name alone is not evidence of equivalence.

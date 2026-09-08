@@ -1,15 +1,13 @@
 ---
 title: Pass Blocks Directly Instead of Converting to Proc
-impact: MEDIUM
-impactDescription: avoids Proc allocation on each call
 tags: meth, block, proc, allocation
 ---
 
 ## Pass Blocks Directly Instead of Converting to Proc
 
-Using `&method(:name)` creates a new `Proc` object on every invocation, which adds allocation pressure in tight loops. Passing a block literal avoids the intermediate `Proc` allocation entirely, keeping the call stack simpler for the VM to optimize.
+Compare block literals with creating Method/Proc adapters only on a measured path. Keep the chosen project style for ordinary calls. Assume the called methods remain stable during enumeration; a captured Method and later dynamic lookup can differ after redefinition.
 
-**Incorrect (new Proc allocated per call site):**
+**Before (new Proc allocated per call site):**
 
 ```ruby
 class ProductCatalog
@@ -25,13 +23,17 @@ class ProductCatalog
     @products.map(&method(:format_name))  # Allocates a new Proc each time
   end
 
+  def active?(product)
+    product.active?
+  end
+
   def export_names
     @products.select(&method(:active?)).map(&method(:format_name))  # Two Proc allocations
   end
 end
 ```
 
-**Correct (block literals, no intermediate Proc):**
+**Alternative (block literals, no intermediate Proc):**
 
 ```ruby
 class ProductCatalog
@@ -45,6 +47,10 @@ class ProductCatalog
 
   def normalized_names
     @products.map { |product| format_name(product) }
+  end
+
+  def active?(product)
+    product.active?
   end
 
   def export_names

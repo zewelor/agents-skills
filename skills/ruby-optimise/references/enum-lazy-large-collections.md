@@ -1,7 +1,5 @@
 ---
 title: Use Lazy Enumerators for Large Collections
-impact: CRITICAL
-impactDescription: processes elements on demand, avoids loading entire collection
 tags: enum, lazy, enumerator, memory
 ---
 
@@ -9,7 +7,7 @@ tags: enum, lazy, enumerator, memory
 
 Eager enumeration materializes every intermediate array in full before moving to the next stage. When you only need a subset of results from a large collection, `.lazy` builds a pipeline that processes one element at a time and stops as soon as the final condition is satisfied.
 
-**Incorrect (processes all elements eagerly):**
+**Before (processes all elements eagerly):**
 
 ```ruby
 recent_premium = transactions
@@ -23,7 +21,7 @@ log_entries = File.readlines("/var/log/app.log")   # loads entire file into memo
   .first(25)
 ```
 
-**Correct (lazy pipeline, processes on demand):**
+**Alternative (lazy pipeline, processes on demand):**
 
 ```ruby
 recent_premium = transactions
@@ -38,3 +36,5 @@ log_entries = File.foreach("/var/log/app.log")     # streams line by line
   .select { |entry| entry["level"] == "error" }
   .first(25)
 ```
+
+Use only when skipped enrichment/parsing has no required side effects and stopping early is intended; later parse errors may no longer be raised. A lazy pipeline does not make an already-loaded Array or an ActiveRecord relation a streaming source. Use the appropriate source API and verify early-exit resource cleanup.

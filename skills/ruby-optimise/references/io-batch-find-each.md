@@ -1,15 +1,13 @@
 ---
 title: Use find_each for Large Record Sets
-impact: HIGH
-impactDescription: O(1000) memory vs O(n) for entire table
 tags: io, batch, find-each, activerecord, memory
 ---
 
 ## Use find_each for Large Record Sets
 
-`User.all.each` loads every record into memory before iteration begins. For tables with millions of rows, this can exhaust available RAM and crash the process. `find_each` fetches records in batches of 1000 (configurable), keeping memory usage constant regardless of table size.
+Use ActiveRecord batch iteration to bound record loading when the operation does not require the original relation ordering or a single read snapshot. Check the installed Rails version: scoped order may be ignored or rejected, and cursor APIs vary. Keep the cursor unique and stable; verify concurrent changes, retries, callbacks, and side effects.
 
-**Incorrect (loads entire table into memory at once):**
+**Before (loads entire table into memory at once):**
 
 ```ruby
 class AccountCleanupJob
@@ -22,15 +20,17 @@ class AccountCleanupJob
 end
 ```
 
-**Correct (processes in batches with constant memory):**
+**Alternative (bound the loaded records per batch):**
 
 ```ruby
 class AccountCleanupJob
   def perform
-    User.where("last_login_at < ?", 2.years.ago).find_each(batch_size: 500) do |user|
+    User.where("last_login_at < ?", 2.years.ago).find_each(batch_size: 500, error_on_ignore: true) do |user|
       user.anonymize_personal_data!
       user.update!(status: :archived)
     end
   end
 end
 ```
+
+Measure peak memory including associations and retained results, not only the batch size. Do not run the cleanup example against production merely to benchmark it. Reference: [Rails 8.1 batches](https://api.rubyonrails.org/v8.1.3/classes/ActiveRecord/Batches.html).

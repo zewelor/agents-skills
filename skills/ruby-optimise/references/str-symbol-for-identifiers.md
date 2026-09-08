@@ -1,52 +1,31 @@
 ---
-title: Use Symbols for Identifiers and Hash Keys
-impact: MEDIUM
-impactDescription: 1.3-2x faster hash lookups, single allocation per symbol
-tags: str, symbols, identifiers, hash-keys
+title: Keep Hash Key Types at API Boundaries
+tags: str, symbols, hashes
 ---
 
-## Use Symbols for Identifiers and Hash Keys
+## Keep Hash Key Types at API Boundaries
 
-String keys are full objects: each lookup computes a hash from every byte of the key, and every literal occurrence may allocate a new String. Symbols are interned and immutable, so the VM allocates each one exactly once and compares them by object ID rather than content. For hashes that are accessed on every request, the difference compounds into measurable throughput gains.
+Choose symbol keys for an internal schema when it matches project conventions.
+Keep string-keyed JSON and other public inputs/outputs unchanged unless an API
+migration is explicitly requested. Do not replace `params["user_id"]` with
+`params[:user_id]`: a plain Hash treats these as different keys.
 
-**Incorrect (string keys compared by content each time):**
+Normalize only known fields at an intentional boundary. Preserve external key
+and value types when returning data:
 
 ```ruby
-def process_order(params)
-  user_id   = params["user_id"]              # hashes every byte of "user_id" on each lookup
-  product   = params["product_id"]
-  quantity  = params["quantity"]
-  coupon    = params["coupon_code"]           # 4 string hashes per call
+def order_attributes(params)
+  { user_id: params["user_id"], product_id: params["product_id"],
+    quantity: params["quantity"] }
+end
 
-  order = {
-    "status"     => "pending",               # new String allocated for each key
-    "total"      => calculate_total(product, quantity, coupon),
-    "created_at" => Time.now,
-    "user_id"    => user_id
-  }
-
-  order["status"] = "confirmed"              # another byte-by-byte hash to find the key
-  order
+def order_payload(attributes)
+  { "user_id" => attributes[:user_id], "product_id" => attributes[:product_id],
+    "quantity" => attributes[:quantity] }
 end
 ```
 
-**Correct (symbol keys compared by identity):**
-
-```ruby
-def process_order(params)
-  user_id   = params[:user_id]               # integer comparison, no byte hashing
-  product   = params[:product_id]
-  quantity  = params[:quantity]
-  coupon    = params[:coupon_code]
-
-  order = {
-    status:     :pending,
-    total:      calculate_total(product, quantity, coupon),
-    created_at: Time.now,
-    user_id:    user_id
-  }
-
-  order[:status] = :confirmed
-  order
-end
-```
+Keep unknown-field handling and missing-key behavior consistent with the public
+contract. Avoid converting arbitrary external keys to symbols for a supposed
+universal speedup. Benchmark real lookups before changing a stable schema for
+performance, including any normalization cost.

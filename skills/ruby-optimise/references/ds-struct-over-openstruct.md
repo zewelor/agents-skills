@@ -1,15 +1,13 @@
 ---
 title: Use Struct Over OpenStruct
-impact: MEDIUM
-impactDescription: Struct is 10-50x faster to instantiate than OpenStruct
 tags: ds, struct, openstruct, allocation
 ---
 
 ## Use Struct Over OpenStruct
 
-`OpenStruct` dynamically defines methods via `method_missing` and `define_method` on each new key, making instantiation 10-50x slower than `Struct`. Struct predefines its accessors at class creation time, resulting in fixed-layout objects the VM can optimize.
+Consider Struct only for an established fixed schema. Check construction, missing fields, extra fields, mutation, equality, reflection, and serialization before replacing OpenStruct. Measure the workload rather than assuming a multiplier. Treat conversion to Data as an explicit mutability/API change.
 
-**Incorrect (dynamic method definition on each instantiation):**
+**Before (dynamic method definition on each instantiation):**
 
 ```ruby
 def parse_api_response(raw_data)
@@ -24,7 +22,7 @@ def parse_api_response(raw_data)
 end
 ```
 
-**Correct (fixed layout, precompiled accessors):**
+**Alternative (fixed layout, precompiled accessors):**
 
 ```ruby
 UserRecord = Struct.new(:name, :email, :role, :created_at, keyword_init: true)
@@ -46,6 +44,8 @@ end
 ```ruby
 UserRecord = Data.define(:name, :email, :role, :created_at)
 
-# Data objects are immutable by design
+# Data prevents member reassignment, but nested mutable objects remain mutable.
 record = UserRecord.new(name: "Jane", email: "jane@example.com", role: "admin", created_at: Time.now)
 ```
+
+Require `ostruct` and `time` for the first example, and `time` for Time.parse in the alternatives. Use Data only on Ruby 3.2+ and verify whether member values must also be copied/frozen.

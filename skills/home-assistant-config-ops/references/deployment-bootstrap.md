@@ -3,11 +3,13 @@
 Use `.deployment_info` only for concise, non-secret facts about one Home
 Assistant instance. Do not place generic commands in it.
 
-## Interview
+## Establish deployment facts
 
-Ask first: Is HA on Kubernetes, reachable by SSH, or local? Where is the
-configuration, and how is an approved repository revision transferred and
-restarted?
+Read the conversation, existing `.deployment_info`, repository instructions,
+and relevant documentation first. Establish the runtime (Kubernetes, SSH, or
+local), configuration path, revision transfer method, and restart strategy.
+Ask only for missing or conflicting facts required by the selected method;
+do not repeat questions already answered by the available context.
 
 Collect only relevant values:
 

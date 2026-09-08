@@ -1,15 +1,13 @@
 ---
 title: Avoid Dynamic send in Performance-Critical Code
-impact: MEDIUM
-impactDescription: send bypasses visibility checks and prevents YJIT optimization
 tags: meth, send, dynamic, dispatch
 ---
 
 ## Avoid Dynamic send in Performance-Critical Code
 
-`send` and `public_send` resolve method names at runtime, which bypasses the inline method cache and prevents YJIT from compiling an optimized dispatch. In tight loops this means each call pays the full lookup cost instead of hitting a cached path.
+Replace dynamic dispatch only for a fixed, approved format set on a measured hot path. Preserve accepted string/symbol inputs and validate unsupported formats before iteration, including empty inputs. Do not infer inline-cache or JIT behavior solely from the presence of `send`.
 
-**Incorrect (dynamic dispatch defeats inline caching):**
+**Before (dynamic dispatch over a fixed format set):**
 
 ```ruby
 class OrderExporter
@@ -22,6 +20,8 @@ class OrderExporter
   end
 
   def export_all(orders, format)
+    format = format.to_s
+    raise ArgumentError, "unsupported format: #{format}" unless %w[csv json].include?(format)
     method_name = "to_#{format}"
     orders.map do |order|
       send(method_name, order)  # Runtime lookup on every iteration
@@ -30,7 +30,7 @@ class OrderExporter
 end
 ```
 
-**Correct (static dispatch, YJIT-optimizable):**
+**Alternative (explicit dispatch over the same formats):**
 
 ```ruby
 class OrderExporter
@@ -43,10 +43,11 @@ class OrderExporter
   end
 
   def export_all(orders, format)
+    format = format.to_s
     case format
-    when :csv
+    when "csv"
       orders.map { |order| to_csv(order) }   # Direct dispatch, cacheable
-    when :json
+    when "json"
       orders.map { |order| to_json(order) }  # Direct dispatch, cacheable
     else
       raise ArgumentError, "unsupported format: #{format}"
@@ -59,3 +60,5 @@ end
 - Metaprogramming frameworks (ORMs, serializers) where dynamism is the point
 - One-off calls outside hot paths
 - Test helpers accessing private methods
+
+Require `json` for `to_json`. Keep dynamic dispatch when plugins or subclasses extend the accepted format set. Treat the CSV-like join as restricted to fields without delimiters, quotes, or newlines; it is not a general CSV encoder.

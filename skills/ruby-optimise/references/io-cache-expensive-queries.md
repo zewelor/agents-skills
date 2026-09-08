@@ -1,54 +1,38 @@
 ---
-title: Cache Expensive Database Results
-impact: MEDIUM
-impactDescription: eliminates repeated identical queries across requests
-tags: io, caching, rails-cache, queries
+title: Cache Only an Accepted Data Snapshot
+tags: io, cache, consistency
 ---
 
-## Cache Expensive Database Results
+## Cache Only an Accepted Data Snapshot
 
-Expensive aggregate queries or complex joins that produce the same result across multiple requests waste database resources when executed repeatedly. Use `Rails.cache.fetch` with a time-based expiry to serve cached results and only hit the database when the cache expires.
+Treat caching as a consistency change, not a transparent refactoring. Establish
+acceptable staleness, invalidation, output shape, and who may see the data before
+adding a cache. Scope keys to every dimension affecting the result, such as a
+tenant, authorization policy, locale, or query parameters. Do not copy a global
+catalog key into a scoped application.
 
-**Incorrect (runs expensive query on every request):**
+Prefer stable scalar data or IDs over cached ActiveRecord instances. For an
+explicitly public, global catalog that accepts a five-minute stale name list:
+
+**Before (query on every call):**
 
 ```ruby
-class ProductCatalogController < ApplicationController
-  def index
-    @categories = Category.all
-      .joins(:products)
-      .select("categories.*, COUNT(products.id) AS product_count")
-      .group("categories.id")
-      .order("product_count DESC")  # complex join + aggregation on every page load
+def category_names
+  Category.order(:id).pluck(:name)
+end
+```
 
-    @featured = Product.where(featured: true)
-      .includes(:reviews)
-      .order(average_rating: :desc)
-      .limit(12)  # repeated on every request despite rarely changing
+**Alternative (cache the approved public snapshot):**
+
+```ruby
+def category_names
+  Rails.cache.fetch("public-catalog:category-names:v1", expires_in: 5.minutes) do
+    Category.order(:id).pluck(:name)
   end
 end
 ```
 
-**Correct (caches results with appropriate expiry):**
-
-```ruby
-class ProductCatalogController < ApplicationController
-  def index
-    @categories = Rails.cache.fetch("catalog:categories_with_counts", expires_in: 15.minutes) do
-      Category.all
-        .joins(:products)
-        .select("categories.*, COUNT(products.id) AS product_count")
-        .group("categories.id")
-        .order("product_count DESC")
-        .to_a  # materialize to Array so it is serializable
-    end
-
-    @featured = Rails.cache.fetch("catalog:featured_products", expires_in: 1.hour) do
-      Product.where(featured: true)
-        .includes(:reviews)
-        .order(average_rating: :desc)
-        .limit(12)
-        .to_a
-    end
-  end
-end
-```
+Use the cache store's documented concurrency and failure behavior. Test a miss,
+hit, expiry/invalidation, scope isolation, and updates; preserve a fresh-read
+path when required. Do not invent a universal TTL or imply current database
+state was verified by a cache hit.

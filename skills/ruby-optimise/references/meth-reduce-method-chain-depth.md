@@ -1,15 +1,13 @@
 ---
 title: Reduce Method Chain Depth in Hot Loops
-impact: MEDIUM
-impactDescription: reduces N × depth dispatch calls to N × 1
 tags: meth, chaining, dispatch, performance
 ---
 
 ## Reduce Method Chain Depth in Hot Loops
 
-Deep method chains like `order.customer.address.city` perform multiple dispatches per access. Inside a loop, this overhead multiplies by the iteration count. Caching the terminal value in a local variable before the loop eliminates redundant traversals.
+Cache intermediate objects within an iteration only when readers are pure and stable for that iteration. Do not hoist values across records. Preserve field evaluation order when it is observable; method dispatch savings alone do not establish a worthwhile optimization.
 
-**Incorrect (repeated chain traversal on every iteration):**
+**Before (repeated chain traversal on every iteration):**
 
 ```ruby
 def shipping_labels(orders)
@@ -26,16 +24,17 @@ def shipping_labels(orders)
 end
 ```
 
-**Correct (cache intermediate objects before accessing fields):**
+**Alternative (cache intermediate objects before accessing fields):**
 
 ```ruby
 def shipping_labels(orders)
   orders.map do |order|
     customer = order.customer
-    address = customer.address  # Single traversal to address
+    recipient = customer.full_name
+    address = customer.address  # Read after full_name, as in the original.
 
     {
-      recipient: customer.full_name,
+      recipient: recipient,
       street: address.street,
       city: address.city,
       postal_code: address.postal_code

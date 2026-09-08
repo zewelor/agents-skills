@@ -1,43 +1,38 @@
 ---
-title: Size Connection Pools to Match Thread Count
-impact: MEDIUM
-impactDescription: prevents connection checkout timeouts under load
-tags: io, connection-pool, threads, database
+title: Size Each Connection Pool Against Its Process
+tags: io, pool, database
 ---
 
-## Size Connection Pools to Match Thread Count
+## Size Each Connection Pool Against Its Process
 
-When the database connection pool is smaller than the number of threads or workers competing for connections, threads block waiting for a checkout and eventually raise `ActiveRecord::ConnectionTimeoutError`. Set the pool size to at least match the maximum thread count of your application server.
+Measure checkout waits before enlarging a pool. Size each process/role/shard's
+pool for its actual simultaneous database users, and keep the total across web
+workers, job processes, replicas, and other clients within the database budget.
+Two Puma processes with five threads each do not share one five-connection pool;
+each process has its own pool. A smaller pool is not automatically a defect.
 
-**Incorrect (pool smaller than thread count, causes timeouts):**
+For a web process with no extra in-process database consumers, use one selected
+thread-count value in both configurations. Validate the launch environment
+before loading either file: require a positive integer thread count and a worker
+configuration supported by the installed Puma version:
 
 ```yaml
-# config/database.yml
+# config/database.yml (ERB evaluated by Rails)
 production:
   adapter: postgresql
   database: storefront_production
-  pool: 5  # default, but Puma runs 5 threads per worker = contention under load
+  pool: <%= Integer(ENV.fetch("RAILS_MAX_THREADS", "5")) %>
 ```
 
 ```ruby
 # config/puma.rb
-workers 2
-threads 5, 5  # 5 threads per worker, 10 total — only 5 connections available per process
+max_threads = Integer(ENV.fetch("RAILS_MAX_THREADS", "5"))
+raise ArgumentError, "RAILS_MAX_THREADS must be positive" unless max_threads.positive?
+workers Integer(ENV.fetch("WEB_CONCURRENCY", "2"))
+threads max_threads, max_threads
 ```
 
-**Correct (pool sized to thread count):**
-
-```yaml
-# config/database.yml
-production:
-  adapter: postgresql
-  database: storefront_production
-  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
-```
-
-```ruby
-# config/puma.rb
-max_threads = ENV.fetch("RAILS_MAX_THREADS") { 5 }.to_i
-workers ENV.fetch("WEB_CONCURRENCY") { 2 }.to_i
-threads max_threads, max_threads  # pool size matches thread count
-```
+Account separately for background threads and other database consumers. Use the
+installed Rails connection lifecycle APIs so connections are returned after
+work, including errors. Validate checkout latency and total server connections
+under representative load before changing production settings.

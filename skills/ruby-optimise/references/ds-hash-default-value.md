@@ -1,7 +1,5 @@
 ---
 title: Use Hash Default Values Instead of Conditional Assignment
-impact: LOW-MEDIUM
-impactDescription: eliminates conditional branches and simplifies accumulation
 tags: ds, hash, default, accumulation
 ---
 
@@ -9,7 +7,7 @@ tags: ds, hash, default, accumulation
 
 Manual nil-checking with `||=` or ternary operators before accumulating into a hash adds branching and visual noise. `Hash.new(default)` and `Hash.new { |h, k| h[k] = default }` handle missing keys automatically, producing cleaner code that eliminates an entire class of nil-related bugs.
 
-**Incorrect (manual nil guard on every access):**
+**Before (manual nil guard on every access):**
 
 ```ruby
 def count_orders_by_status(orders)
@@ -30,7 +28,7 @@ def group_products_by_category(products)
 end
 ```
 
-**Correct (default values handle missing keys automatically):**
+**Alternative (default values handle missing keys automatically):**
 
 ```ruby
 def count_orders_by_status(orders)
@@ -38,6 +36,7 @@ def count_orders_by_status(orders)
   orders.each do |order|
     counts[order.status] += 1  # Returns 0 for missing keys
   end
+  counts.default = nil  # Preserve the returned hash's missing-key behavior.
   counts
 end
 
@@ -46,6 +45,7 @@ def group_products_by_category(products)
   products.each do |product|
     grouped[product.category] << product  # Auto-creates array for new keys
   end
+  grouped.default_proc = nil  # A later missing-key read must not insert a key.
   grouped
 end
 ```

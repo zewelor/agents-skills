@@ -1,15 +1,13 @@
 ---
 title: Preallocate Arrays When Size Is Known
-impact: LOW-MEDIUM
-impactDescription: avoids repeated resizing and memory copies
 tags: ds, array, preallocation, memory
 ---
 
 ## Preallocate Arrays When Size Is Known
 
-When the result size is known upfront, using `Array.new(n)` with a block allocates the correct capacity in a single step. Building an array with `<<` in a loop triggers multiple resize-and-copy cycles as the internal buffer grows (typically doubling at 0, 4, 8, 16, ...).
+Use `Array.new(n)` with a block for a known result size when it improves the measured path. Assume an Integer `month_count` in this example; preserve the original empty result for non-positive counts. Avoid assumptions about internal capacity growth. Profile repeated `select` scans first: their cost can dominate array growth.
 
-**Incorrect (repeated resizing as array grows):**
+**Before (repeated resizing as array grows):**
 
 ```ruby
 def compute_monthly_totals(transactions, month_count)
@@ -22,10 +20,12 @@ def compute_monthly_totals(transactions, month_count)
 end
 ```
 
-**Correct (single allocation with exact size):**
+**Alternative (single allocation with exact size):**
 
 ```ruby
 def compute_monthly_totals(transactions, month_count)
+  return [] if month_count <= 0  # Preserve Integer#times behavior for negatives.
+
   Array.new(month_count) do |i|
     month_transactions = transactions.select { |t| t.month_index == i }
     month_transactions.sum(&:amount)  # No resizing needed
@@ -36,11 +36,11 @@ end
 **Also applies to map/collect:**
 
 ```ruby
-# Already optimal — map preallocates based on receiver size
+# Prefer a direct map for a one-to-one transformation
 totals = transactions.map(&:amount)
 ```
 
 **When preallocation matters most:**
-- Large arrays (1000+ elements)
+- Large arrays with measurable growth overhead
 - Latency-sensitive code paths
 - Memory-constrained environments

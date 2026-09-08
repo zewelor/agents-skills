@@ -1,15 +1,13 @@
 ---
 title: Use Single-Pass Collection Transforms
-impact: CRITICAL
-impactDescription: eliminates N intermediate arrays from chained methods
 tags: enum, single-pass, chaining, arrays
 ---
 
 ## Use Single-Pass Collection Transforms
 
-Chained `.select.map` creates a temporary array after each stage. For a collection of N elements, this allocates two full-size arrays and iterates twice. Single-pass alternatives like `filter_map` or `each_with_object` traverse once and allocate only the final result.
+Fuse `select.map` only when predicates and transformations are pure and interleaving their evaluation preserves the contract. Use `each_with_object` to preserve all mapped values, including nil and false. Use `filter_map` (Ruby 2.7+) only when dropping falsey mapped values is intended. Keep separate passes if side effects or exception order matter.
 
-**Incorrect (multiple intermediate arrays):**
+**Before (multiple intermediate arrays):**
 
 ```ruby
 active_emails = users
@@ -21,12 +19,12 @@ discounted_totals = orders
   .map { |order| order.total * 0.85 }  # two passes, two throwaway arrays
 ```
 
-**Correct (single-pass transform):**
+**Alternative (single-pass transform):**
 
 ```ruby
-active_emails = users.filter_map { |user|
-  user.email if user.confirmed? && user.active?  # one pass, one allocation
-}
+active_emails = users.each_with_object([]) do |user, emails|
+  emails << user.email if user.confirmed? && user.active?
+end
 
 discounted_totals = orders.each_with_object([]) { |order, totals|
   totals << order.total * 0.85 if order.coupon_applied?

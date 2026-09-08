@@ -1,27 +1,25 @@
 ---
 title: Use flat_map Instead of map.flatten
-impact: HIGH
-impactDescription: eliminates intermediate nested array allocation
 tags: enum, flat-map, flatten, arrays
 ---
 
 ## Use flat_map Instead of map.flatten
 
-Calling `.map { ... }.flatten` first builds a full nested array, then allocates a second flattened copy. `flat_map` yields directly into a single output array, cutting allocations in half and avoiding the extra traversal.
+Replace `map { ... }.flatten(1)` with `flat_map` when the block returns ordinary arrays and interleaving mapping with flattening is safe. Preserve flattening depth: plain `flatten` is recursive, while `flat_map` flattens one level. Check custom `to_ary` behavior and side effects; measure allocations instead of promising a fixed reduction.
 
-**Incorrect (intermediate nested array):**
+**Before (intermediate nested array):**
 
 ```ruby
 all_line_items = orders
   .map { |order| order.line_items }   # builds array of arrays
-  .flatten                             # traverses again to flatten into new array
+  .flatten(1)                          # flatten exactly one level
 
 tag_names = products
   .map { |product| product.categories.map(&:name) }  # nested array of arrays of strings
-  .flatten
+  .flatten(1)
 ```
 
-**Correct (single flattened pass):**
+**Alternative (single flattened pass):**
 
 ```ruby
 all_line_items = orders
@@ -30,3 +28,6 @@ all_line_items = orders
 tag_names = products
   .flat_map { |product| product.categories.map(&:name) }
 ```
+
+Keep recursive flattening when required: for `[[[1]]]`, `map { |x| x }.flatten`
+returns `[1]`, while `flat_map { |x| x }` returns `[[1]]`.

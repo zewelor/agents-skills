@@ -1,15 +1,13 @@
 ---
 title: Enable Frozen String Literals
-impact: HIGH
-impactDescription: reduces GC pressure by ~20%, saves ~100MB in production Rails apps
 tags: str, frozen, literals, gc
 ---
 
 ## Enable Frozen String Literals
 
-Every string literal in Ruby allocates a new mutable object by default. In a request-heavy Rails app, this produces millions of short-lived strings that flood the garbage collector. The `frozen_string_literal` pragma makes every literal in the file frozen and deduplicated at compile time, eliminating those allocations entirely.
+Use frozen string literals under the project convention after checking mutation and return contracts. Non-interpolated literals can be reused; interpolated strings and concatenation still allocate. Preserve mutable outputs explicitly. Treat adding the pragma as a compatibility change, not an automatic optimization for every file.
 
-**Incorrect (new string allocated on every call):**
+**Before (new string allocated on every call):**
 
 ```ruby
 class OrderMailer
@@ -26,7 +24,7 @@ class OrderMailer
 end
 ```
 
-**Correct (literals frozen and deduplicated at compile time):**
+**Alternative (literals frozen and deduplicated at compile time):**
 
 ```ruby
 # frozen_string_literal: true
@@ -35,12 +33,12 @@ class OrderMailer
   def confirmation_subject(order)
     prefix = "Order Confirmation"
     separator = " - "
-    "#{prefix}#{separator}#{order.reference}"
+    prefix + separator + order.reference  # Preserve string coercion and mutable result.
   end
 
   def format_status(order)
     status = "pending"
-    order.status == status ? "awaiting" : order.status
+    order.status == status ? +"awaiting" : order.status
   end
 end
 ```

@@ -1,15 +1,13 @@
 ---
 title: Use Set for Membership Tests
-impact: MEDIUM
-impactDescription: O(1) lookup vs O(n) with Array#include?
 tags: ds, set, lookup, performance
 ---
 
 ## Use Set for Membership Tests
 
-`Array#include?` scans elements linearly, making each lookup O(n). `Set#include?` uses a hash table internally, providing O(1) average-case lookups. For any collection checked repeatedly, the constant-time lookup dominates as size grows.
+Consider Set for repeated membership checks on a sufficiently large collection. Include set construction and memory in the benchmark. Preserve equality semantics: Array membership uses `==`, while Set relies on `hash` and `eql?`. For example, an Array containing `1` can match `1.0`, while a Set containing `1` does not.
 
-**Incorrect (linear scan on every check):**
+**Before (linear scan on every check):**
 
 ```ruby
 ALLOWED_STATUSES = ["active", "pending", "trialing"].freeze
@@ -21,7 +19,7 @@ def filter_eligible_users(users)
 end
 ```
 
-**Correct (constant-time hash lookup):**
+**Alternative (constant-time hash lookup):**
 
 ```ruby
 require "set"
@@ -36,6 +34,6 @@ end
 ```
 
 **When to prefer Array:**
-- Very small collections (< 5 elements) where linear scan is faster than hashing
+- Small collections, including the three-status example, unless measurement favors Set
 - Ordered iteration is required
-- Elements are not hashable
+- Elements lack a consistent hash/eql? contract or mutate after insertion

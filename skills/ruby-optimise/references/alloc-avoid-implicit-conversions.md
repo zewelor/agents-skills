@@ -1,72 +1,47 @@
 ---
-title: Avoid Repeated Computation in Hot Paths
-impact: MEDIUM-HIGH
-impactDescription: eliminates redundant allocations from repeated to_s, to_a, Time.now
-tags: alloc, conversions, implicit, performance
+title: Hoist Only Invariant Conversions
+tags: alloc, conversions, invariants
 ---
 
-## Avoid Repeated Computation in Hot Paths
+## Hoist Only Invariant Conversions
 
-Expressions like `Time.now.to_s`, `Integer#to_s`, and `group.members.to_a` allocate new objects on every invocation. Inside tight loops, these repeated computations accumulate thousands of throwaway objects. Hoist invariant conversions outside the loop and pass raw values to helpers that format once.
+Hoist a conversion only when its input and result stay constant for the entire
+loop, and when conversion timing has no observable side effects. Preserve the
+log payload, value types, and per-item timestamps. Treat a switch from event
+time to batch time as a separate behavior change.
 
-**Incorrect (repeated conversions inside loop):**
+Assume `generated_at` is a fixed Time supplied for this report and product
+attributes are pure readers. Keep the logger's hash contract unchanged:
+
+**Before (repeat the same report-time conversion):**
 
 ```ruby
-class InventoryReport
-  def generate(products)
-    rows = []
-    products.each do |product|
-      rows << "#{product.sku}: #{product.quantity} units @ #{product.price}"
-      log_entry = {
-        sku: product.sku.to_s,          # Allocates new string if sku is a Symbol
-        quantity: product.quantity.to_s, # Integer#to_s allocates every call
-        timestamp: Time.now.to_s        # New Time + new String per iteration
-      }
-      audit_log(log_entry)
-    end
-    rows
+def report_entries(products, generated_at:)
+  products.map do |product|
+    { sku: product.sku.to_s, quantity: product.quantity.to_s,
+      timestamp: generated_at.to_s }
   end
 end
 ```
 
-**Correct (hoist invariant conversions, pass raw values):**
+**Alternative (convert the invariant report time once):**
 
 ```ruby
-class InventoryReport
-  def generate(products)
-    rows = []
-    timestamp = Time.now.to_s  # Compute once — same timestamp for the batch
-    products.each do |product|
-      sku = product.sku
-      qty = product.quantity
-      price = product.price
-      rows << "#{sku}: #{qty} units @ #{price}"
-      audit_log(sku, qty, timestamp)  # Pass raw values, let the logger format once
-    end
-    rows
-  end
-
-  private
-
-  def audit_log(sku, quantity, timestamp)
-    @logger.write(sku, quantity, timestamp)
+def report_entries(products, generated_at:)
+  timestamp = nil
+  products.map do |product|
+    sku = product.sku.to_s
+    quantity = product.quantity.to_s
+    timestamp ||= generated_at.to_s
+    { sku: sku, quantity: quantity, timestamp: timestamp.dup }
   end
 end
 ```
 
-**Pre-convert collections when shape is known:**
+Retain independent timestamp strings if consumers may mutate entries, as above.
+Measure whether avoiding repeated formatting outweighs the retained copies.
+For an empty input, keep the conversion unevaluated. Do not hoist `Time.now`
+when a fresh event time is required for each item.
 
-```ruby
-# Incorrect -- to_a inside loop re-creates array each time
-user_groups.each do |group|
-  members = group.members.to_a  # New array per group even if already an Array
-  process_members(members)
-end
-
-# Correct -- only convert if needed
-user_groups.each do |group|
-  members = group.members
-  members = members.to_a unless members.is_a?(Array)
-  process_members(members)
-end
-```
+Do not add type-checking scaffolding around plain `Array#to_a`: it already
+returns that array. Inspect custom enumerables before assuming conversion cost.

@@ -1,9 +1,12 @@
 ---
 name: deep-research
-description: Generate a structured Deep Research prompt and copy it to clipboard. Use when the user needs careful research for complex real-life or professional decisions, including legal/property, tax, medical, financial, travel, consumer, administrative, business, technical, or strategy questions; the user then pastes into their preferred deep research tool.
+description: Generate or refine a structured prompt for a Deep Research tool and copy it to clipboard. Use only when the user explicitly asks to prepare, write, or revise a Deep Research prompt to paste into another tool. Do not use for requests to conduct research, investigate a topic, or provide research findings, even when the user calls the task deep research.
 ---
 
-You are a research prompt engineer. Your job is to turn a messy real question into a focused Deep Research prompt that helps the user make a decision, prepare for an expert conversation, or compare options. The output is a prompt for another research tool, not the research itself.
+# Deep Research Prompt Builder
+
+Turn the user's question into a focused prompt for another Deep Research tool.
+Frame it around the user's decision, expert conversation, or comparison of options.
 
 ## Core workflow
 

@@ -1,11 +1,13 @@
 ---
 name: docker
-description: "Harden Docker images and Compose configurations with multi-stage Dockerfiles, scratch or distroless non-root runtimes, BuildKit layer and cache-mount hygiene, cross-platform build semantics, .dockerignore rules, Debian alignment, and the preferred Ruby/Bundler base image (ghcr.io/zewelor/ruby). Use for Dockerfile, compose.yaml, docker-compose, scratch, distroless, hardening, read_only, cap_drop, HEALTHCHECK, buildx platform arguments, multi-arch image behavior, linux/arm64, or .dockerignore work. Do not use for GitHub Actions permissions, tokens, action version pinning, release jobs, or workflow-level cache orchestration."
+description: "Harden Docker images and Compose configurations with multi-stage Dockerfiles, scratch or distroless non-root runtimes, BuildKit layer and cache-mount hygiene, cross-platform build semantics, .dockerignore rules, Debian alignment, and the preferred Ruby/Bundler base image (ghcr.io/zewelor/ruby). Use for docker run, Dockerfile, compose.yaml, docker compose, docker-compose, scratch, distroless, hardening, read_only, cap_drop, HEALTHCHECK, buildx platform arguments, multi-arch image behavior, linux/arm64, or .dockerignore work. Do not use for GitHub Actions permissions, tokens, action version pinning, release jobs, or workflow-level cache orchestration."
 ---
 
-# Hardened Multi-Stage Docker Builds
+# Docker Builds and Container Runtime
 
-Apply to production images, not local dev. See section headers below for the full scope.
+Keep image-hardening recommendations focused on production images. Disable
+runtime networking only when the workload needs no network access, including
+for local development and one-off tasks.
 
 Keep the scope limited to Dockerfile structure, build context, BuildKit behavior,
 image contents, runtime hardening, and Compose. Delegate CI trust boundaries,
@@ -14,12 +16,25 @@ GitHub Actions-specific skill.
 
 ## Workflow
 
-Follow this workflow:
+Match the work to the requested scope:
+
+- For a single container launch from an existing image, apply only relevant
+  runtime settings: network needs, mounts, user permissions, and compatible
+  security/resource limits. Follow [Runtime Network Isolation](#runtime-network-isolation).
+  Do not add an image rebuild, change the base image, or redesign Compose
+  unless required by the task.
+- For Compose runtime configuration, apply relevant network and orchestration
+  settings to the affected services. Preserve the image build unless the
+  requested change requires it.
+- For Dockerfile or image-build work, follow the image workflow below and
+  consult the relevant build sections.
+
+### Image workflow
 
 1. Identify the project language/runtime (Go, Node, Python, Ruby, or other). Pick the matching `deps` pattern below.
 2. Pick the smallest viable runtime: scratch for a truly static binary, distroless `nonroot` when runtime files are needed, or an explicit non-root user otherwise.
 3. Apply layer-cache hygiene: copy lockfiles before source, set `BUNDLE_PATH` outside the app dir for Ruby, use `--mount=type=cache` only when there are external dependencies.
-4. Harden compose: `read_only`, `cap_drop: ALL`, `no-new-privileges`, custom networks with `internal: true` for backend, `deploy.resources.limits` + `restart_policy`, `build.target` for stage selection.
+4. If Compose is in scope, apply compatible runtime hardening from the orchestration section and select `build.target` when needed.
 5. Apply per-stage cleanup in the same RUN: `apt-get clean && rm -rf /var/lib/apt/lists/*`; `npm cache clean --force`; `rm -rf /usr/share/doc /usr/share/man` before the runtime stage.
 
 ## Multi-Stage Dockerfile Architecture
@@ -165,6 +180,20 @@ Build SDK/compiler base image and Distroless runtime image should target the exa
 - Avoid rolling or generic tags (`golang:latest`, `node:22`, `python:3.12`). Declare the suite name explicitly (e.g., `-trixie` for Debian 13) to match build and runtime.
 - Debian 13 / Trixie: build `golang:1.26-trixie` / `node:22-trixie`; runtime `gcr.io/distroless/static-debian13:nonroot` / `base-debian13:nonroot`.
 
+## Runtime Network Isolation
+
+Disable networking whenever the container workload needs no network access,
+including utilities, linters, formatters, and offline tests:
+
+- Use `docker run --network none ...` for CLI launches.
+- Set `network_mode: "none"` on the service for `docker compose` or
+  `docker-compose`, including one-off `run` commands. Omit the service's
+  `networks` field when setting `network_mode`.
+- Check whether the workload needs downloads, APIs, databases, communication
+  with other containers, or inbound connections before disabling networking.
+  Keep networking enabled only where needed; do not equate no internet access
+  with no network access.
+
 ## Orchestration Security Hardening
 
 In `compose.yaml` and Kubernetes manifests, apply maximum sandboxing to prevent runtime escalations:
@@ -172,7 +201,6 @@ In `compose.yaml` and Kubernetes manifests, apply maximum sandboxing to prevent 
 - `read_only: true` - read-only root filesystem; blocks installing malicious packages or altering static assets at runtime.
 - `security_opt: ["no-new-privileges:true"]` - blocks `setuid`/`setgid` privilege escalation.
 - `cap_drop: ["ALL"]` - drops all default kernel capabilities; restricts administrative syscalls.
-- `network_mode: none` - for utilities, linters, formatters that need no external connectivity; blocks exfiltration and inbound.
 - `user: "1001:1001"` - always declare explicit non-root UID/GID unless using a natively nonroot base (Distroless `nonroot`).
 
 Defense in depth and reliability:

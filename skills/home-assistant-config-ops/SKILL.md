@@ -11,8 +11,10 @@ active HA runtime as separate evidence sources.
 
 ## Establish scope and authority
 
-1. Read the repository `AGENTS.md`, `.deployment_info`, and relevant local
-   documentation before runtime access.
+1. Use the conversation's established facts, scope, and approvals. Read the
+   repository `AGENTS.md`, `.deployment_info`, and relevant local documentation
+   before runtime access. Ask only about missing or conflicting facts needed
+   for the next action.
 2. If `.deployment_info` is missing or incomplete, follow
    [deployment-bootstrap.md](references/deployment-bootstrap.md). Create it as
    a separate preparatory step, not as part of a read-only audit.
@@ -20,8 +22,10 @@ active HA runtime as separate evidence sources.
    secrets, call mutating services, copy files, restart HA, or deploy unless
    the user explicitly authorizes that action.
 4. Never commit, push, open a pull request, tag, deploy, or restart solely
-   because the user asked to edit or audit. Obtain explicit approval for each
-   applicable action.
+   because the user asked to edit or audit. Reuse explicit approval already
+   given in the conversation for the same target, actions, and scope; one
+   approval may cover several delivery steps. Ask only for actions not yet
+   authorized or material changes to the approved target, scope, or effects.
 5. When instructions or access fail, perform only the smallest safe read-only
    check that distinguishes the cause. Promptly report the target, redacted
    evidence, expected and actual result, missing instruction, and smallest
