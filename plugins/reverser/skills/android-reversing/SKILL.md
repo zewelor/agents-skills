@@ -1,22 +1,26 @@
 ---
 name: android-reversing
-description: Analyze Android APK, DEX, manifest, resources, Java or Kotlin reconstruction, and JNI boundaries with project-pinned Droid ASC and isolated JADX. Use for Android package triage, exported-component review, reference or single-class searches, full decompilation, multidex or split-package limitations, and mapping native methods to `.so` libraries. Do not use for a standalone native binary after the relevant library and ABI are already known; use ghidra-reversing instead.
+description: Analyze Android APK, DEX, manifest, resources, Java or Kotlin reconstruction, and JNI boundaries with project-pinned Droid ASC and isolated JADX. Use for Android package triage, exported-component review, class inventory, reference or single-class searches, full decompilation, multidex or split-package limitations, and mapping native methods to `.so` libraries. Do not use for a standalone native binary after the relevant library and ABI are already known; use ghidra-reversing instead.
 ---
 
 # Android Reversing
+
+Read and apply the shared [evidence method](../../references/evidence-method.md)
+before starting analysis. Use the Android-specific decisions below to select
+and operate the parser.
 
 Locate the runtime checkout from the current workspace or a path supplied by the user. Accept it only when `README.md`, `AGENTS.md`, `mise.toml`, `compose.yaml`, and `docker/jadx/Dockerfile` identify the expected reverser toolchain. Do not scan unrelated home directories or assume a machine-specific path. If the checkout cannot be located, report that prerequisite instead of improvising another toolchain. Treat the checkout's current files as authoritative.
 
 ## Establish the question and sample
 
-- Define the concrete behavior to explain and the evidence that will close the question.
-- Record the sample's provenance, path, size, and SHA-256. Inspect the archive for `AndroidManifest.xml`, every `classes*.dex`, resources, assets, and `lib/<abi>/*.so`.
+- Inspect the archive for `AndroidManifest.xml`, every `classes*.dex`, resources, assets, and `lib/<abi>/*.so`.
 - Detect a base-only or incomplete split APK set and state that limitation. Never combine results from samples whose hashes differ.
-- Keep the sample inert. Do not install or execute the APK, its code, or plugins taken from it. Do not contact endpoints found in the sample.
+- Do not install the APK or plugins taken from it.
 
 ## Select the parser
 
-- Use project-pinned Droid ASC through `mise exec -- droidasc` for a trusted sample when the question needs only the manifest, references to a string/type/method/field, or one known class.
+- Use project-pinned Droid ASC through `mise exec -- droidasc` for a trusted sample when the question needs only the manifest, a filtered class inventory through `listclass`, references to a string/type/method/field, or one known class.
+- Use `droidasc listclass <apk> --prefix <package>` to locate classes across all DEX entries without generating a full source tree. Preserve the command and output with the other ASC evidence.
 - Put `findrefs` options such as `--threads` and `--debug` before the APK path. Treat string patterns as regular expressions and escape metacharacters for literal matches.
 - Use the Compose `jadx` service for untrusted input, resources, nested classes, broader reconstruction, or a complete code map. Keep `network_mode: none`, the read-only input mount, and `--user "$(id -u):$(id -g)"` intact.
 - Do not infer absence from a negative ASC search. Account for unsupported DEX constructs, reflection, indirect calls, dynamic loading, and result truncation.
@@ -32,5 +36,4 @@ Locate the runtime checkout from the current workspace or a path supplied by the
 ## Preserve evidence
 
 - Store generated ASC and JADX output under `analysis/<case>/asc/` and `analysis/<case>/jadx/`. Keep durable conclusions in `analysis/<case>/notes.md`.
-- Record tool versions, full commands, exit codes, relevant class and method names, patterns, hashes, and limitations. Distinguish observed facts, interpretations, and hypotheses.
 - Treat reconstructed Java as decompiler output, not original source. Confirm security-relevant or disputed conclusions with independent DEX or native evidence.

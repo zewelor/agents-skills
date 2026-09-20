@@ -1,6 +1,6 @@
 {
   "name": "reverser",
-  "version": "0.1.0+codex.20260920081550",
+  "version": "0.1.0+codex.20260920103908",
   "description": "Evidence-driven Android and native reverse engineering with Droid ASC, JADX, and headless Ghidra MCP.",
   "author": {
     "name": "zewelor",
