@@ -1,0 +1,11 @@
+interface:
+  display_name: "Ghidra Reversing"
+  short_description: "Analyze native binaries with headless Ghidra"
+  default_prompt: "Use $ghidra-reversing to analyze this native binary through Ghidra MCP."
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "ghidra"
+      description: "Loopback headless Ghidra MCP server"
+      transport: "streamable_http"
+      url: "http://127.0.0.1:8081/mcp"

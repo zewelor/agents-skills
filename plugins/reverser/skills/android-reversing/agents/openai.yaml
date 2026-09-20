@@ -1,0 +1,4 @@
+interface:
+  display_name: "Android Reversing"
+  short_description: "Analyze APK, DEX, resources, and JNI safely"
+  default_prompt: "Use $android-reversing to analyze this APK and document reproducible evidence."

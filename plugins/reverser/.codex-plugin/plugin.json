@@ -1,0 +1,36 @@
+{
+  "name": "reverser",
+  "version": "0.1.0",
+  "description": "Evidence-driven Android and native reverse engineering with Droid ASC, JADX, and headless Ghidra MCP.",
+  "author": {
+    "name": "zewelor",
+    "url": "https://github.com/zewelor"
+  },
+  "homepage": "https://github.com/zewelor/agents-skills/tree/main/plugins/reverser",
+  "repository": "https://github.com/zewelor/agents-skills",
+  "keywords": [
+    "reverse-engineering",
+    "android",
+    "apk",
+    "jadx",
+    "ghidra"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Reverser",
+    "shortDescription": "Analyze Android and native binaries safely",
+    "longDescription": "Analyze APK and DEX files with Droid ASC or isolated JADX, follow JNI boundaries into native libraries, and inspect binaries through a loopback-only headless Ghidra MCP service.",
+    "developerName": "zewelor",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Analyze this APK and record reproducible evidence.",
+      "Trace this JNI boundary into the native library.",
+      "Inspect this binary through headless Ghidra."
+    ]
+  },
+  "mcpServers": "./.mcp.json"
+}
