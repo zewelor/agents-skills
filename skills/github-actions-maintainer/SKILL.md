@@ -1,6 +1,6 @@
 ---
 name: github-actions-maintainer
-description: "Create, review, harden, and maintain GitHub Actions workflows and reusable workflows. Use for files under .github/workflows, workflow triggers, GITHUB_TOKEN permissions, secrets and OIDC, action version references, pull-request trust boundaries, release and package publishing, GHCR access, Docker Buildx cache orchestration, multi-architecture CI, concurrency, timeouts, attestations, actionlint, or zizmor findings. Use together with the Docker skill when Dockerfile structure, image contents, BuildKit layers, or container runtime hardening are also in scope."
+description: Maintain GitHub Actions workflows, permissions, and publishing boundaries. Use when workflow configuration is in scope, including CI failures caused by it.
 ---
 
 # GitHub Actions Maintainer

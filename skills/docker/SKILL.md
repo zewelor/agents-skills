@@ -1,6 +1,6 @@
 ---
 name: docker
-description: "Harden Docker images and Compose configurations with multi-stage Dockerfiles, scratch or distroless non-root runtimes, BuildKit layer and cache-mount hygiene, cross-platform build semantics, .dockerignore rules, Debian alignment, and the preferred Ruby/Bundler base image (ghcr.io/zewelor/ruby). Use for docker run, Dockerfile, compose.yaml, docker compose, docker-compose, scratch, distroless, hardening, read_only, cap_drop, HEALTHCHECK, buildx platform arguments, multi-arch image behavior, linux/arm64, or .dockerignore work. Do not use for GitHub Actions permissions, tokens, action version pinning, release jobs, or workflow-level cache orchestration."
+description: Build or troubleshoot Docker images and configure container or Compose runtime. Skip routine execution of existing project commands and CI-only workflow changes.
 ---
 
 # Docker Builds and Container Runtime

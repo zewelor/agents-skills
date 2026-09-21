@@ -1,6 +1,6 @@
 ---
 name: golang-project-starter
-description: Design and bootstrap small, opinionated Go projects from an idea or early repository. Use when starting a Go service, CLI, worker, or library; turning requirements into a written specification and implementation plan; re-scoping an overdesigned Go starter toward a minimal MVP; or deciding project conventions, dependencies, testing, containers, native Git hooks, Renovate, GitHub Actions, and delivery workflow before implementation.
+description: Design and bootstrap a minimal Go project from an idea or early repository. Use for project setup and MVP scope, not routine work in an established Go codebase.
 ---
 
 # Go Project Starter

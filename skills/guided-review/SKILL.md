@@ -1,6 +1,6 @@
 ---
 name: guided-review
-description: Interactive Git workflow for reviewing an existing change scope or automatically preparing one or more coherent staged packages, validating them, asking concise comprehension questions, optionally obtaining a manually requested independent second opinion, and committing only after explicit user approval. Use when a user explicitly asks for a guided review of code, configuration, documentation, or infrastructure changes, invokes $guided-review, wants to understand a repository change before approving it, or requests an interactive commit-and-next flow.
+description: Guide an interactive review of Git changes with comprehension questions and approved commits. Use when explicitly requested or invoked as $guided-review, not for ordinary review.
 ---
 
 # Guided Review
