@@ -33,9 +33,10 @@ Match the work to the requested scope:
 
 1. Identify the project language/runtime (Go, Node, Python, Ruby, or other). Pick the matching `deps` pattern below.
 2. Pick the smallest viable runtime: scratch for a truly static binary, distroless `nonroot` when runtime files are needed, or an explicit non-root user otherwise.
-3. Apply layer-cache hygiene: copy lockfiles before source, set `BUNDLE_PATH` outside the app dir for Ruby, use `--mount=type=cache` only when there are external dependencies.
-4. If Compose is in scope, apply compatible runtime hardening from the orchestration section and select `build.target` when needed.
-5. Apply per-stage cleanup in the same RUN: `apt-get clean && rm -rf /var/lib/apt/lists/*`; `npm cache clean --force`; `rm -rf /usr/share/doc /usr/share/man` before the runtime stage.
+3. Choose variable lifetime: use `ARG` for build-only versions, source revisions, toolchain paths, and compiler flags (including across later `RUN` instructions in the same stage); use `ENV` for values intentionally kept in the image or the build-stage environment, such as `PATH`. Re-declare global `ARG` after `FROM` when needed. Pass credentials through BuildKit secret or SSH mounts, never `ARG` or `ENV`.
+4. Apply layer-cache hygiene: copy lockfiles before source, set `BUNDLE_PATH` outside the app dir for Ruby, use `--mount=type=cache` only when there are external dependencies.
+5. If Compose is in scope, apply compatible runtime hardening from the orchestration section and select `build.target` when needed.
+6. Apply per-stage cleanup in the same RUN: `apt-get clean && rm -rf /var/lib/apt/lists/*`; `npm cache clean --force`; `rm -rf /usr/share/doc /usr/share/man` before the runtime stage.
 
 ## Multi-Stage Dockerfile Architecture
 
