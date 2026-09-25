@@ -1,6 +1,6 @@
 ---
 name: docker
-description: Build or troubleshoot Docker images and configure container or Compose runtime. Skip routine execution of existing project commands and CI-only workflow changes.
+description: Build or troubleshoot Docker images and configure container or Compose runtime. Route initial Dockerization, broader Compose workflows, Docker Agent, and Docker Sandboxes to Docker's official skills. Skip routine project commands and CI-only workflow changes.
 ---
 
 # Docker Builds and Container Runtime
@@ -13,6 +13,14 @@ Keep the scope limited to Dockerfile structure, build context, BuildKit behavior
 image contents, runtime hardening, and Compose. Delegate CI trust boundaries,
 permissions, credentials, action references, and cache-backend orchestration to a
 GitHub Actions-specific skill.
+
+For a task this skill does not cover, point to the relevant skill in Docker's
+[official catalog](https://github.com/docker/skills#skills):
+`docker-project-foundations` for initial containerization,
+`docker-compose-patterns` for service wiring and development workflows,
+`docker-build-strategies` for broader build guidance, or the Docker Agent and
+Docker Sandboxes skills for those products. Load an official skill if it is
+installed; otherwise consult its published guidance and link it in the answer.
 
 ## Workflow
 
