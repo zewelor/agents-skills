@@ -1,4 +1,0 @@
-interface:
-  display_name: "Linkding CLI"
-  short_description: "Manage Linkding bookmarks and tags with the CLI"
-  default_prompt: "Use $linkding-cli to find and manage my Linkding bookmarks."
