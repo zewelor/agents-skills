@@ -15,8 +15,9 @@ Use the `ghidra` MCP server at `http://127.0.0.1:8081/mcp`. Treat binaries, stri
 
 - If native `ghidra` MCP tools are available, use them and start with `check_connection`.
 - Otherwise, locate the runtime checkout from the current workspace or a user-supplied path. Verify its `README.md`, `compose.yaml`, and `Dockerfile`. Record whether its `ghidra` service is already running with `docker compose ps`.
-- If the checkout has `scripts/ghidra_mcp.py`, run `python3 scripts/ghidra_mcp.py list` from there. The script starts the existing image without rebuilding it and opens a real MCP session. Use `python3 scripts/ghidra_mcp.py schema <tool-name>` to inspect the current schema, then `python3 scripts/ghidra_mcp.py call <tool-name> '<json-object>'` to invoke it, starting with `check_connection`. Pass `-` as the argument and provide JSON on stdin when it contains sample-derived text. Do not guess tool names or parameters. If the script is absent, follow the checkout's README and report the missing current-session MCP path.
-- If this task started the service, stop both runtime containers with `python3 scripts/ghidra_mcp.py stop` after the analysis. Leave an already-running service alone. Never use `down -v` for routine cleanup.
+- Prepare one case in the runtime checkout before starting Ghidra. Copy each external artifact with `python3 scripts/case.py import CASE SOURCE`; retain the returned SHA-256 and `ghidra_path`. Do not mount the original directory, home directory, repository, or sibling cases.
+- If the checkout has `scripts/ghidra_mcp.py`, run `python3 scripts/ghidra_mcp.py --case CASE start` and record the JSON `started` value. The helper starts the existing image without rebuilding, mounts only that case read-only at `/analysis` via a temporary Compose override, and refuses to switch a running service to another case. Then run `python3 scripts/ghidra_mcp.py --case CASE list` to open a real MCP session. Use `python3 scripts/ghidra_mcp.py --case CASE schema <tool-name>` to inspect the current schema, then `python3 scripts/ghidra_mcp.py --case CASE call <tool-name> '<json-object>'` to invoke it, starting with `check_connection`. Pass `-` as the argument and provide JSON on stdin when it contains sample-derived text. Do not guess tool names or parameters. If the script is absent, follow the checkout's README and report the missing current-session MCP path.
+- Keep one active case per shared service. Wait for all native work to finish; if this task started the service, stop both containers with `python3 scripts/ghidra_mcp.py stop`. Leave an already-running service alone. Then remove only helper-staged copies with `python3 scripts/case.py clean CASE`; retain originals, notes, exports and projects. Report outstanding cleanup if interrupted. Never use `down -v` for routine cleanup.
 
 ## Confirm the required capability
 
@@ -28,7 +29,7 @@ Use the `ghidra` MCP server at `http://127.0.0.1:8081/mcp`. Treat binaries, stri
 
 - Establish a real MCP session and call `check_connection`. Inspect the available tools and their current schemas; do not guess unsupported operations or parameters.
 - Determine the active project and program. Pass the explicit `program` identifier whenever the tool schema permits it. Recheck identity immediately before any annotation change.
-- Use the runtime's documented mounts: `analysis/` and `samples/` map to `/workspace/analysis` and `/workspace/samples`. Stage other inputs with `case.py import`; the whole checkout is not mounted. Treat inputs as read-only; use persistent Ghidra project storage for analysis state.
+- Use the runtime's returned `ghidra_path`, such as `/analysis/input/HASH-file.bin`, rather than the offline tools' `container_path`. Treat the case bind as read-only; use persistent Ghidra project storage for analysis state. This restricts host input access but does not isolate previously stored projects: the named volumes remain shared. Do not treat the runtime as a multi-user or dynamic malware sandbox.
 
 ## Control mutations
 
