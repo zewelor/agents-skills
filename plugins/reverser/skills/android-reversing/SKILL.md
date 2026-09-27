@@ -9,7 +9,7 @@ Read and apply the shared [evidence method](../../references/evidence-method.md)
 before starting analysis. Use the Android-specific decisions below to select
 and operate the parser.
 
-Locate the runtime checkout from the current workspace or a path supplied by the user. Accept it only when `README.md`, `AGENTS.md`, `mise.toml`, `compose.yaml`, and `docker/jadx/Dockerfile` identify the expected reverser toolchain. Do not scan unrelated home directories or assume a machine-specific path. If the checkout cannot be located, report that prerequisite instead of improvising another toolchain. Treat the checkout's current files as authoritative.
+Locate the runtime checkout from the current workspace or a path supplied by the user. Accept it only when `README.md`, `AGENTS.md`, `mise.toml`, `compose.yaml`, and `docker/jadx/Dockerfile` identify the expected reverser toolchain. Do not scan unrelated home directories or assume a machine-specific path. If the checkout cannot be located, report that prerequisite instead of improvising another toolchain. Treat the checkout's current files as authoritative. Use `scripts/run_tool.py --case CASE jadx ...` or `aotopsy ...` for sample parsing when this helper is present; the Compose tools mount no host files by default. Use the staged container path and the tool-specific `/output/CASE/TOOL` output path.
 
 ## Establish the question and sample
 

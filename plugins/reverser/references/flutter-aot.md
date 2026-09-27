@@ -45,7 +45,7 @@ not prerequisites for every runtime:
 ```sh
 python3 scripts/doctor.py --route flutter --sample analysis/CASE/native/libapp.so --probe
 mkdir -p analysis/CASE/aotopsy
-docker compose run --rm --no-deps --user "$(id -u):$(id -g)" aotopsy \
+python3 scripts/run_tool.py --case CASE aotopsy \
   /workspace/analysis/CASE/native/libapp.so --out /output/CASE/aotopsy
 ```
 
