@@ -40,7 +40,7 @@ Match the work to the requested scope:
 ### Image workflow
 
 1. Identify the project language/runtime (Go, Node, Python, Ruby, or other). Pick the matching `deps` pattern below.
-2. Pick the smallest viable runtime: scratch for a truly static binary, distroless `nonroot` when runtime files are needed, or an explicit non-root user otherwise.
+2. Pick the smallest viable runtime using [Minimal Non-Root Runtimes](#minimal-non-root-runtimes). Start truly static binaries with `scratch` and required runtime data; expand only for demonstrated needs.
 3. Choose variable lifetime: use `ARG` for build-only versions, source revisions, toolchain paths, and compiler flags (including across later `RUN` instructions in the same stage); use `ENV` for values intentionally kept in the image or the build-stage environment, such as `PATH`. Re-declare global `ARG` after `FROM` when needed. Pass credentials through BuildKit secret or SSH mounts, never `ARG` or `ENV`.
 4. Apply layer-cache hygiene: copy lockfiles before source, set `BUNDLE_PATH` outside the app dir for Ruby, use `--mount=type=cache` only when there are external dependencies.
 5. If Compose is in scope, apply compatible runtime hardening from the orchestration section and select `build.target` when needed.
@@ -138,21 +138,77 @@ referenced images does not imply a no-cache build.
 
 ## Minimal Non-Root Runtimes
 
-Prefer scratch or Google Distroless over a full OS runtime when the application permits it.
+Minimize production runtime contents. Use this preference order within the
+application's actual linking/runtime requirements; skip incompatible choices.
+Expand only for a demonstrated requirement or a justified maintenance/provenance
+need. Treat this as a contents preference, not a universal security ranking:
 
-- Truly static binaries: scratch with only the binary and required runtime data such as CA certificates; declare a numeric `USER` such as `65532:65532`.
-- Static binaries (Go, Rust): `gcr.io/distroless/static-debianX:nonroot`.
-- Dynamic binaries or interpreted apps (Node.js, Python): `gcr.io/distroless/base-debianX:nonroot` or language-specific distroless images.
-- Static distroless runtimes have no dynamic linker. Static linking is required: `CGO_ENABLED=0` for Go, static musl/glibc targets for Rust.
-- For Ruby, use the `-distroless` variant from the `ghcr.io/zewelor/ruby` registry; it matches the build image's Debian release automatically.
+1. For a truly static binary, start with `scratch`, the binary, and only required
+   runtime data. Copy trusted CA certificates for HTTPS using system trust;
+   declare a numeric non-root `USER`, such as `65532:65532`, and an exec-form
+   `ENTRYPOINT`. Verify static linking rather than inferring it from the language;
+   use `CGO_ENABLED=0` for Go when the application supports it.
+2. Before changing the base, add a missing data file or writable directory when
+   that is sufficient. Include timezone data only for named-zone conversion or
+   local-time behavior that needs it; UTC, timeouts, and unchanged timestamp
+   strings do not require it. For Go, consider embedding standard `time/tzdata`
+   instead of copying zoneinfo files. Refresh copied CA/zoneinfo data through
+   rebuilds; embedding tzdata requires rebuilding the binary to update it.
+   Do not copy the builder's entire filesystem.
+3. Consider a maintained static runtime, such as `dhi.io/static` or
+   `gcr.io/distroless/static-debianX:nonroot`, when its supplied runtime files or
+   maintenance/provenance benefits justify replacing the working scratch image.
+   Compare actual contents and supported releases; do not assume one provider's
+   static image is always smaller or safer. Keep static linking for these images;
+   moving to a static base does not resolve a missing dynamic loader/library.
+4. For dynamic linking, select the smallest maintained nonroot runtime providing
+   the required loader and libraries, such as Distroless
+   `base-debianX:nonroot` or `cc-debianX:nonroot`, or a matching DHI runtime. For interpreted apps, select a runtime for the language;
+   a generic Distroless `base` alone does not supply Node.js or Python.
+5. Use a minimal full-distribution runtime only when required capabilities cannot
+   reasonably be supplied by the earlier choices. Keep shells, package managers,
+   compilers, and debug utilities out of production unless the workload needs them.
 
-Distroless uses UID 65532 as `nonroot`. Chown the bundle to 65532:65532 before `COPY --from=builder` and run as `USER nonroot`.
+Treat Docker Hardened Images as a provider choice at the appropriate step,
+including `static`, rather than a larger final rung or a guarantee of greater
+security. Evaluate signed SBOM/provenance, update policy, registry authentication,
+and actual runtime contents alongside attack surface. Do not treat base-image
+attestations as proof of the final build or copied binary. Pin external bases by
+digest and deliberately refresh them; neither a minimal base nor DHI fixes
+vulnerabilities in the copied binary or its compiled dependencies.
 
-Skip `HEALTHCHECK` in distroless (no `curl`/`wget`/`nc` available); rely on orchestrator-level probes (Kubernetes `livenessProbe`/`readinessProbe`, ECS `healthCheck`) which run from outside the container. Add a `HEALTHCHECK` directive only when the runtime image is not distroless (slim or alpine with shell utilities).
+Validate the resulting image through realistic runtime scenarios covering the
+application's actual needs: HTTPS trust, DNS resolution, nonroot permissions,
+writable paths, and named timezones when used. Record the missing capability or
+maintenance/provenance rationale before changing the base. Do not add a shell
+solely to make production debugging easier.
+
+Consult the [DHI runtime guidance](https://docs.docker.com/dhi/how-to/use/) and
+[Distroless image catalog](https://github.com/GoogleContainerTools/distroless)
+for supported variants and their contents.
+
+For Ruby, use the `-distroless` variant from the `ghcr.io/zewelor/ruby` registry;
+match the build image's Debian release.
+
+Use the selected image's nonroot user (UID 65532 for Google Distroless `nonroot`)
+or an explicit numeric UID/GID. Keep application code and dependencies
+root-owned and readable/executable by that user; grant write ownership only
+to paths the application must modify. Create or mount those paths with the
+required permissions, including when using a read-only root filesystem.
+
+Use external HTTP/TCP/gRPC probes where the orchestrator supports them, or
+exec-form checks using an existing application healthcheck command. Docker
+`HEALTHCHECK`, ECS container health checks, and Kubernetes exec probes run
+inside the container and require the invoked executable there. Do not add a
+shell or curl solely for a check; scratch and distroless can use an existing
+application executable without a shell. Omit checks that do not fit the workload.
 
 ## Non-Root User Creation (when distroless is not viable)
 
-When scratch or distroless is not viable and the runtime needs a full OS, create a non-root user explicitly. Use a numeric UID and GID for custom users so the image works consistently across runtimes; official distroless `nonroot` images are the named-user exception.
+Use the base image's suitable nonroot user when available. Otherwise declare a
+numeric UID/GID; create passwd/group entries only when the application needs
+user lookup or a home directory. Use the distribution's user-creation tools in
+the build stage when available, keeping them out of a minimal runtime.
 
 Debian / Ubuntu:
 
@@ -186,14 +242,21 @@ Critical settings:
 
 Native extensions (e.g., `psych` for YAML, `nokogiri`) require build tools and headers at the `deps` stage but not at runtime. Pass them via a `DEV_PACKAGES` build arg (e.g., `build-essential libyaml-dev`) and exclude them from the runtime base.
 
-In distroless: in the builder stage, `chown -R 65532:65532 /bundle /app`. Then in the distroless stage, `COPY --from=builder /bundle /bundle` and `COPY --from=builder /app /app`, and run as `USER nonroot` (UID 65532).
+In distroless, copy `/bundle` and `/app` from the builder with read/execute
+permissions for UID 65532 and run as `USER nonroot`. Keep code and gems
+root-owned; provide separately writable paths only where the app needs them.
 
 ## Debian Version Alignment
 
-Build SDK/compiler base image and Distroless runtime image should target the exact same Debian release. Mismatches cause glibc errors and OS drift.
+For dynamically linked binaries and native extensions, verify target
+architecture, libc (glibc versus musl), loader, and library ABI compatibility.
+Prefer matching Debian releases for Debian build/runtime stages to reduce ABI
+mismatches; verify required libraries rather than assuming the suite alone
+is sufficient. Select explicit supported suite/version tags and pin digests.
 
-- Avoid rolling or generic tags (`golang:latest`, `node:22`, `python:3.12`). Declare the suite name explicitly (e.g., `-trixie` for Debian 13) to match build and runtime.
-- Debian 13 / Trixie: build `golang:1.26-trixie` / `node:22-trixie`; runtime `gcr.io/distroless/static-debian13:nonroot` / `base-debian13:nonroot`.
+Do not require matching distributions for a truly static binary without external
+ABI dependencies. An Alpine Go builder with `CGO_ENABLED=0` can target scratch
+or a compatible static runtime; validate the resulting artifact and image.
 
 ## Runtime Network Isolation
 
