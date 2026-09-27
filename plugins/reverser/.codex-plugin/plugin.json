@@ -1,7 +1,7 @@
 {
   "name": "reverser",
-  "version": "0.1.0+codex.20260923061429",
-  "description": "Evidence-driven Android and native reverse engineering with Droid ASC, JADX, and headless Ghidra MCP.",
+  "version": "0.1.0+codex.20260927aot",
+  "description": "Evidence-driven Android, Flutter AOT, and native reverse engineering with the local offline runtime.",
   "author": {
     "name": "zewelor",
     "url": "https://github.com/zewelor"
@@ -13,13 +13,14 @@
     "android",
     "apk",
     "jadx",
-    "ghidra"
+    "ghidra",
+    "flutter"
   ],
   "skills": "./skills/",
   "interface": {
     "displayName": "Reverser",
     "shortDescription": "Analyze Android and native binaries safely",
-    "longDescription": "Analyze APK and DEX files with Droid ASC or isolated JADX, follow JNI boundaries into native libraries, and inspect binaries through a loopback-only headless Ghidra MCP service.",
+    "longDescription": "Analyze APK/DEX with Droid ASC or isolated JADX, recover Flutter Dart AOT objects and API contracts, and inspect native binaries through loopback Ghidra MCP with explicit capability checks.",
     "developerName": "zewelor",
     "category": "Developer Tools",
     "capabilities": [

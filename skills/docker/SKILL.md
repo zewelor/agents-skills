@@ -46,6 +46,12 @@ Match the work to the requested scope:
 5. If Compose is in scope, apply compatible runtime hardening from the orchestration section and select `build.target` when needed.
 6. Apply per-stage cleanup in the same RUN: `apt-get clean && rm -rf /var/lib/apt/lists/*`; `npm cache clean --force`; `rm -rf /usr/share/doc /usr/share/man` before the runtime stage.
 
+Check checksum and shell-utility flags in the actual build stage: Alpine's
+BusyBox tools do not necessarily accept GNU long options (for example, use
+`sha256sum -c` for a pinned checksum file rather than assuming `--check --strict`).
+When inspecting optional Compose tools, include their profile in the resolved
+configuration; absence from the default profile is not proof the service is missing.
+
 ## Multi-Stage Dockerfile Architecture
 
 All applications should use multi-stage builds to isolate the toolchain, dependencies, and tests from the production runtime.

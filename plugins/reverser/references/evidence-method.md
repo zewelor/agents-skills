@@ -51,7 +51,10 @@ function or artifact by default.
 - Use limits and pagination. Expand analysis only when new evidence, errors, or
   an unresolved material question justifies it.
 - After a timeout, inspect task state before retrying, especially for imports,
-  analysis, or mutations.
+  analysis, or mutations. If two attempts fail for the same reason without new
+  evidence, revisit the owning layer or missing capability before another variant.
+- Consult [known workflow failures](workflow-failures.md) when the symptom matches;
+  load only the relevant route-specific reference.
 
 ## Report reproducibly
 
@@ -59,5 +62,9 @@ function or artifact by default.
   function or address, command or tool arguments, evidence, and limitations.
 - Record tool versions, full commands, exit codes, hashes, import settings,
   annotations, and the next discriminating test in `analysis/<case>/notes.md`.
+- Keep a short current-state block: canonical artifact path/hash, confirmed
+  conclusions, superseded assumptions, and next discriminating test. Keep the
+  chronological log below it; do not make another agent reconstruct current truth
+  from obsolete examples or parallel copies of a client.
 - Do not claim complete understanding from a few functions or from completion
   of an automatic analysis pass.

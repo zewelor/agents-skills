@@ -1,6 +1,6 @@
 ---
 name: android-reversing
-description: Analyze Android APK, DEX, manifest, resources, Java or Kotlin reconstruction, and JNI boundaries with project-pinned Droid ASC and isolated JADX. Use for Android package triage, exported-component review, class inventory, reference or single-class searches, full decompilation, multidex or split-package limitations, and mapping native methods to `.so` libraries. Do not use for a standalone native binary after the relevant library and ABI are already known; use ghidra-reversing instead.
+description: Analyze Android APK, DEX, manifest, resources, Java or Kotlin reconstruction, JNI boundaries, and Flutter Dart AOT with the project-pinned offline toolchain. Use for APK triage, DEX references and reconstruction, split-package limits, JNI mapping, and recovering Flutter API or business logic from libapp.so. Use ghidra-reversing for ordinary native implementations after the library and ABI are known; keep Dart snapshot recovery on this route.
 ---
 
 # Android Reversing
@@ -16,6 +16,12 @@ Locate the runtime checkout from the current workspace or a path supplied by the
 - Inspect the archive for `AndroidManifest.xml`, every `classes*.dex`, resources, assets, and `lib/<abi>/*.so`.
 - Detect a base-only or incomplete split APK set and state that limitation. Never combine results from samples whose hashes differ.
 - Do not install the APK or plugins taken from it.
+
+## Select the owning layer
+
+- Detect Flutter from `libapp.so` plus `libflutter.so`. For Dart-owned behavior, read [Flutter AOT](../../references/flutter-aot.md); do not search only the DEX plugin shell or send a Dart snapshot through a generic native route by default.
+- For API reconstruction, read [API contracts](../../references/api-contracts.md) before implementing authentication or response semantics.
+- Use the runtime's `scripts/doctor.py` if present to check the selected route. A missing host CLI may exist in Compose; a working MCP connection does not establish import capability.
 
 ## Select the parser
 

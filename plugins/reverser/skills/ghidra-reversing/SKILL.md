@@ -18,6 +18,12 @@ Use the `ghidra` MCP server at `http://127.0.0.1:8081/mcp`. Treat binaries, stri
 - If the checkout has `scripts/ghidra_mcp.py`, run `python3 scripts/ghidra_mcp.py list` from there. The script starts the existing image without rebuilding it and opens a real MCP session. Use `python3 scripts/ghidra_mcp.py schema <tool-name>` to inspect the current schema, then `python3 scripts/ghidra_mcp.py call <tool-name> '<json-object>'` to invoke it, starting with `check_connection`. Pass `-` as the argument and provide JSON on stdin when it contains sample-derived text. Do not guess tool names or parameters. If the script is absent, follow the checkout's README and report the missing current-session MCP path.
 - If this task started the service, stop it with `docker compose stop ghidra` after the analysis. Leave an already-running service alone. Never use `down -v` for routine cleanup.
 
+## Confirm the required capability
+
+- Separate connection, import, analysis, and query readiness. Inspect import schemas before planning a fresh binary import. `PluginTool not available` or `Import requires GUI mode` is a capability boundary, not a connection failure; do not retry path variants or restart a healthy service.
+- Use an available, documented headless importer or report the missing import path. Validate a new importer on a synthetic/public fixture before attributing failures to a private sample. A GZF-only import cannot load an arbitrary ELF directly.
+- For Flutter `libapp.so`, read [Flutter AOT](../../references/flutter-aot.md) and use the snapshot-aware path for Dart objects; use Ghidra for a specific unresolved native question.
+
 ## Establish the target
 
 - Establish a real MCP session and call `check_connection`. Inspect the available tools and their current schemas; do not guess unsupported operations or parameters.
