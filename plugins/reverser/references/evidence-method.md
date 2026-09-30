@@ -25,15 +25,33 @@ function or artifact by default.
 ## Analyze progressively
 
 1. Validate the parser or importer settings, including ABI, image base,
-   segments, entry point, and analysis status.
+   segments, entry point, and analysis status. Before interpreting an unfamiliar
+   region as code, check its references, segment context, and use; consider
+   tables, resources, compressed data, or mixed code and data. Successful
+   disassembly alone does not establish executable code.
 2. Build a bounded map from relevant manifests, resources, imports, exports,
-   strings, symbols, and references.
+   strings, symbols, and references. Treat these as leads: follow relevant
+   consumers, argument sources, and call conditions to establish use. Distinguish
+   artifact presence, a reachable implementation, and observed runtime behavior.
 3. Form a discriminating hypothesis and choose the next query that separates
-   competing explanations.
+   competing explanations. Use recognized implementation patterns as hypotheses
+   to check against callers and data flow, not as proof of purpose or author intent.
 4. Trace callers, callees, arguments, return values, branches, and data flow in
-   only the scope needed to close the question.
+   only the scope needed to close the question. For key routines, summarize inputs,
+   relevant state, transformations, branch conditions, outputs, side effects, and
+   error paths. Statically trace a concrete input through the instructions and
+   check the conditions that select another relevant path. Infer implementation constraints
+   from this model; keep claims about the author's motivation separate.
 5. Confirm material conclusions against lower-level evidence such as DEX
-   instructions, disassembly, bytes, references, and import settings.
+   instructions, disassembly, bytes, references, and import settings. When a
+   consequential parser, ABI, or compiler-pattern ambiguity remains, test that
+   specific assumption with a small fixture of known source and behavior. Prefer
+   an existing fixture when sufficient; otherwise build one from your own source.
+   Match relevant architecture, ABI, compiler version, optimization settings, and
+   parser/import configuration to the target where applicable, or record differences
+   and limit the conclusion accordingly. Record what the fixture establishes and
+   its limits for the target sample; fixture results do not establish the sample's
+   runtime behavior.
 6. Preserve useful knowledge through explicitly authorized names, comments,
    types, or signatures; read back every mutation and save the project.
 
