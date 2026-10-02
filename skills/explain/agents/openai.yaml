@@ -1,0 +1,4 @@
+interface:
+  display_name: "Explain"
+  short_description: "Clear explanations with concrete examples"
+  default_prompt: "Use $explain to explain this topic clearly with a concrete example."
