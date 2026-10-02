@@ -25,8 +25,8 @@ Locate the runtime checkout from the current workspace or a path supplied by the
 
 ## Select the parser
 
-- Use project-pinned Droid ASC through `mise exec -- droidasc` for a trusted sample when the question needs only the manifest, a filtered class inventory through `listclass`, references to a string/type/method/field, or one known class.
-- Use `droidasc listclass <apk> --prefix <package>` to locate classes across all DEX entries without generating a full source tree. Preserve the command and output with the other ASC evidence.
+- Use project-pinned Droid ASC through `mise exec -- droidasc` for a trusted sample when the question needs only the manifest, a filtered class inventory through `listclass`, references to a string/type/method/field, or one known class. Set the command's working directory to the resolved runtime checkout containing `mise.toml`, and pass the APK by absolute path. For example, run `mise exec -- droidasc getmanifest /absolute/path/sample.apk` there. If `mise` reports `No version is set for shim: droidasc`, check the working directory and `mise.toml` before changing tools or installing anything.
+- Use `mise exec -- droidasc listclass /absolute/path/sample.apk --prefix com.example` from that directory to locate classes across all DEX entries without generating a full source tree. Preserve the command and output with the other ASC evidence.
 - Put `findrefs` options such as `--threads` and `--debug` before the APK path. Treat string patterns as regular expressions and escape metacharacters for literal matches.
 - Use the Compose `jadx` service for untrusted input, resources, nested classes, broader reconstruction, or a complete code map. Keep `network_mode: none`, the read-only input mount, and `--user "$(id -u):$(id -g)"` intact.
 - Do not infer absence from a negative ASC search. Account for unsupported DEX constructs, reflection, indirect calls, dynamic loading, and result truncation.

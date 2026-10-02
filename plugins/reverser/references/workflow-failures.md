@@ -11,6 +11,7 @@ apply every row to an ordinary task.
 | Filename implies encrypted key | Inspect PEM/container format and parser result; do not infer encryption from name |
 | MCP responds, binary import says GUI/PluginTool required | Inspect import capability; stop connection/path retries |
 | Global doctor says blocked for tools irrelevant to the task | Check only the selected route, including Compose-provided tools |
+| `mise` says `No version is set for shim: droidasc` while the runtime has `mise.toml` | Run from the resolved runtime checkout with an absolute APK path; check the pinned tool entry before treating ASC as unavailable |
 | Synthetic test prompts on the human terminal | Detach subprocess session; do not supply a real password to fixtures |
 | List filter differs from each returned row's classification | Preserve both; test semantic assumption without overwriting rows |
 | Unexpectedly empty xrefs or few decoded instructions | Check index completeness and known function boundaries before asserting absence |
