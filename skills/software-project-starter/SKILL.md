@@ -22,8 +22,11 @@ these defaults; reuse decisions and authorization already established.
 
 ## Plan the MVP
 
-- Tie scope and dependencies to the first useful scenario and required guarantees.
-  Keep speculative abstractions and deferred features out of the implementation.
+- Tie scope, dependencies, abstractions, and configuration to the first useful
+  scenario and required guarantees. Prefer designs that are easy to understand
+  and change; keep deferred features out of the implementation.
+- Define the smallest public interface that supports the scenario, with clear
+  inputs, outputs, and failure behavior. Keep implementation details internal.
 - Reuse canonical documents. For a tiny project, combine the contract and short
   prioritized plan; include observable acceptance criteria and verification.
 - Define the project's quality bar in that contract: pair each required guarantee

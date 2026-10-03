@@ -16,9 +16,11 @@ Record the decisions needed to build and verify the project:
 
 1. Goal, project shape, and first realistic end-to-end scenario.
 2. MVP scope, required guarantees, and explicit exclusions.
-3. Public contracts: CLI, HTTP, files, data, UI flows, or library API.
+3. Public contracts: CLI, HTTP, files, data, UI flows, or library API. Define
+   observable inputs, outputs, validation, and failure behavior where relevant.
 4. Runtime, distribution, persistence, security, and recovery requirements.
-5. Chosen stack and dependencies with concrete reasons.
+5. Chosen stack and dependencies with concrete reasons. For decisions expensive
+   to reverse, record the key trade-off and why a simpler alternative falls short.
 6. Fixed conventions and the few necessary configuration values.
 7. Testing decisions, including PBT/stateful/formal-methods assessment.
 8. Selected tooling, review loop, and delivery authorization.
