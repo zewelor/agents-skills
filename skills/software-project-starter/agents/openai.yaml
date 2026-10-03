@@ -1,0 +1,4 @@
+interface:
+  display_name: "Software Project Starter"
+  short_description: "Plan minimal software projects across languages"
+  default_prompt: "Use $software-project-starter to shape a minimal project contract, assess testing methods, and plan or implement reviewed vertical slices."
