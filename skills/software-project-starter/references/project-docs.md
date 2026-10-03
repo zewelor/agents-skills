@@ -30,6 +30,31 @@ project, and keep the resulting contract as short as practical.
 Replace obsolete decisions instead of appending contradictory history. Move
 deferred alternatives to the parking lot only when they are worth revisiting.
 
+## Quality bar
+
+Record standing quality requirements beside the Definition of Done in the
+existing contract. Reuse an existing constraints document if the project has
+one; avoid creating a second source of truth. Keep task acceptance criteria in
+the plan and link to the standing requirements.
+
+- Choose only dimensions justified by this project's risks and user needs.
+  Reuse existing tools; do not install a scanner or coverage tool just to fill
+  out a checklist.
+- Pair each requirement with its reason, exact check command, evidence artifact
+  when needed, and blocking or advisory status. Distinguish an enforced rule
+  from a target whose checker is unavailable or not yet implemented.
+- Measure an existing baseline before proposing a numerical budget. For a new
+  project, use a justified user target or gather representative evidence first;
+  avoid arbitrary coverage percentages or web metrics for a CLI.
+- Place fast focused checks in the development loop, relevant acceptance checks
+  at slice completion, and the complete required E2E suite at delivery. Put
+  expensive checks in CI or an explicit verification stage when selected;
+  preserve required checks even when they exceed a preferred time budget.
+- Investigate new suppressions, skipped or deleted tests, weakened assertions,
+  and lowered thresholds. Record justified replacements or exceptions with a
+  reason and scope; keep failures visible rather than weakening the agreed bar
+  to make a change pass.
+
 ## `docs/implementation-plan.md`
 
 Keep this as the only prioritized backlog. Plan a small number of vertical

@@ -26,6 +26,10 @@ these defaults; reuse decisions and authorization already established.
   Keep speculative abstractions and deferred features out of the implementation.
 - Reuse canonical documents. For a tiny project, combine the contract and short
   prioritized plan; include observable acceptance criteria and verification.
+- Define the project's quality bar in that contract: pair each required guarantee
+  or justified budget with a reproducible check, evidence, and blocking or
+  advisory status. Reuse existing checks and measure a baseline before proposing
+  numerical thresholds; read the project-documents guidance for details.
 - Present the compact plan, then implement when authorized and material decisions
   are settled. For a specification-only request, deliver the documents.
 
@@ -54,6 +58,9 @@ version-sensitive choices; add new references only when real use warrants them.
   material unresolved decision, or a blocker.
 - Run checks appropriate to the project and complete required validation. Broaden
   testing when failures or unresolved risks justify it; review and correct issues.
+- Keep the agreed quality bar intact. Surface skipped checks, weakened assertions,
+  new suppressions, or lowered budgets; change a requirement only through an
+  explicit scope decision, with a reason recorded in the canonical contract.
 - Update the canonical contract and plan when scope changes. When durable agent
   guidance will help future work, include the testing reconsideration reminder.
 - Report the working result, verification evidence, and remaining gaps. Honor
