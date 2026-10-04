@@ -21,6 +21,8 @@ preferred explanation style.
 - Keep the first response to a few short paragraphs and a small example or diagram.
   Include a necessary qualification, but leave secondary mechanisms for follow-up.
   Honor explicit requests for a comprehensive explanation.
+- When dividing a longer explanation into sections, make each answer one reader
+  question. Keep short answers in ordinary paragraphs when headings add no value.
 - Finish once that explanation is useful. Do not append a recap, quiz, or routine
   invitation to choose another format.
 
@@ -42,6 +44,8 @@ preferred explanation style.
 
 - Add a small diagram proactively when relationships, sequence, or state changes
   are easier to understand visually. Keep ordinary explanations in the conversation.
+- Match helpful visuals to the information: sequence diagrams for interactions,
+  trees for hierarchies, timelines for changes over time, and tables for comparisons.
 - Use Mermaid, text, or SVG diagrams for exact relationships and labels. Use an
   available image-generation tool for illustrations when their visual form helps.
   Explain how the visual relates to the example; do not add decorative graphics.
@@ -64,6 +68,8 @@ preferred explanation style.
   `pokaż diagram` by changing the requested aspect without restarting the explanation.
   Carry those preferences through the current conversation; a new topic still gets
   a concrete example unless the user requests otherwise.
+- For a targeted follow-up, preserve unaffected content, examples, terminology,
+  and diagrams. Update related parts when needed for accuracy and consistency.
 - Treat feedback as a correction for the current conversation. Persist a preference
   in the authoring skill only when the user asks to update it; do not claim that
   conversational feedback alone changes future sessions.
