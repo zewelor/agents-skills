@@ -6,6 +6,10 @@ You are an agent assisting with managing, creating, and optimizing skills in the
 
 This repository houses custom skills that extend AI agents' capabilities. Every skill is a self-contained directory under the `skills/` folder following the spec defined in `.agents/skills/skill-creator`.
 
+Before creating or editing agent-facing instructions, read
+[`writing-for-agents`](skills/writing-for-agents/SKILL.md) for the writing review.
+Keep the required skill-creator and pre-commit audit workflow below.
+
 ## Critical Workflow: Pre-Commit Skill Audit
 
 Whenever you add a new skill or update an existing one, you **MUST** perform a full audit of the skill before committing or completing the task. 

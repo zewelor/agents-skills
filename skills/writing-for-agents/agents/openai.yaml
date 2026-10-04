@@ -1,0 +1,7 @@
+interface:
+  display_name: "Writing for Agents"
+  short_description: "Write precise, lean instructions for agents"
+  default_prompt: "Use $writing-for-agents to review these agent instructions, preserve their requirements, and propose a minimal improvement."
+
+policy:
+  allow_implicit_invocation: true
