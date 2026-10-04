@@ -1,0 +1,4 @@
+interface:
+  display_name: "Goal Design"
+  short_description: "Design verifiable goals for multi-step agent work"
+  default_prompt: "Use $goal-design to turn my task into a verifiable goal, challenge possible shortcuts, and define scope and stopping conditions."
