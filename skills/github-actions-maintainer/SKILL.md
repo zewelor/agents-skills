@@ -139,6 +139,11 @@ runtime users, and BuildKit cache mounts. Keep workflow orchestration here.
 ## Reliability and Validation
 
 - Add `timeout-minutes` to bound stuck jobs.
+- Consider `parallel` for independent steps within one job; execution continues
+  after the group finishes. Use `background: true` for asynchronous steps,
+  `wait`/`wait-all` to synchronize, and `cancel` to stop background services.
+  Check the [workflow syntax documentation](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstepsparallel)
+  before implementation.
 - Add concurrency groups for replaceable CI and use `cancel-in-progress: true`
   there. Do not cancel release or deployment jobs unless replacement is proven
   safe.
