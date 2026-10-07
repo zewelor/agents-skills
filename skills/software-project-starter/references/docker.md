@@ -7,7 +7,7 @@ building project-owned images.
 Apply the build guidance below when building project-owned images. Inspect
 each build's context directory, Dockerfile, and effective ignore file; maintain
 ignore rules for that context. Use Docker's actual filtering, including negated
-patterns. Add inspection to the existing task runner; use a Justfile when no
+patterns. Add inspection to the existing task runner; use a justfile when no
 runner exists and a shared command is useful.
 
 The example below covers a local `.` context with the root `.dockerignore` and

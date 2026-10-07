@@ -20,7 +20,7 @@ of the scaffold. Preserve tools already required by the project contract.
   Publish only selected image platforms; justify release machinery and dependencies.
 - Keep credentials in the project's established secret mechanism. Keep required
   configuration explicit and failures visible.
-- Use an existing task runner. Add a Justfile only for useful shared commands
+- Use an existing task runner. Add a justfile only for useful shared commands
   or the selected Docker context inspection target; avoid parallel command layers.
 
 ## Configure selected local hooks
