@@ -24,6 +24,13 @@ installed; otherwise consult its published guidance and link it in the answer.
 
 ## Workflow
 
+For runtime changes, identify the effective Docker endpoint, accounting for
+context, environment, and CLI overrides. Confirm daemon mode with `docker info`;
+use its server security options to identify rootless, not the context name or
+CLI user's UID. Check versions and feature support only where relevant.
+If the target is unavailable or the task is image-only, report runtime assumptions
+and unverified checks.
+
 Match the work to the requested scope:
 
 - For a single container launch from an existing image, apply only relevant
@@ -36,6 +43,30 @@ Match the work to the requested scope:
   requested change requires it.
 - For Dockerfile or image-build work, follow the image workflow below and
   consult the relevant build sections.
+
+### Runtime users and bind mounts
+
+- Prefer the image's non-root user; override it with Compose `user` only for
+  required access or application behavior. This override does not change daemon mode.
+- Before changing users or bind mounts, check paths and permissions on the daemon
+  host (including remote or Desktop environments): ownership, traversal, groups,
+  ACLs, and UID/GID mapping. In rootless, container UID 0 maps to the daemon's
+  host user; nonzero UIDs map to subordinate IDs. In `userns-remap`, UID 0 also
+  maps to a subordinate ID. Matching numeric host/container UIDs alone is insufficient.
+- Allow `user: "0"` for verified rootless workloads needing that host user's
+  files. Record the reason and verify application compatibility. Namespace root
+  retains access to that user's mounted files; it is not host UID 0. Reassess
+  this override before using rootful Docker or `userns-remap`.
+- Verify required reads and traversal as the chosen process user. If writes are
+  needed, test them and resulting host ownership in a disposable directory on
+  the same mount. Use application tools when the image has no shell.
+- Mount inputs read-only where possible. Preserve host permissions; do not default
+  to recursive `chown`, broad `chmod`, or privileged mode to fix access failures.
+
+For uncertain mappings, consult Docker's [UID/GID guidance](https://docs.docker.com/engine/security/rootless/uid-gid-mapping/).
+For version-dependent networking, privileged port publishing, or resource limits,
+check the relevant [rootless tips](https://docs.docker.com/engine/security/rootless/tips/)
+and [limitations](https://docs.docker.com/engine/security/rootless/troubleshoot/).
 
 ### Image workflow
 
@@ -54,9 +85,11 @@ configuration; absence from the default profile is not proof the service is miss
 
 ## Multi-Stage Dockerfile Architecture
 
-All applications should use multi-stage builds to isolate the toolchain, dependencies, and tests from the production runtime.
+Use multi-stage builds when separating build/test tools from the production
+runtime reduces its contents. Keep a single stage when no such separation is
+needed; create only stages the project uses.
 
-Stage lifecycle:
+Select relevant stages from this lifecycle:
 
 - `base` - runtime/SDK environment with host platform variables.
 - `deps` - resolve packages before copying source, to leverage layer caching.
@@ -187,10 +220,11 @@ Consult the [DHI runtime guidance](https://docs.docker.com/dhi/how-to/use/) and
 [Distroless image catalog](https://github.com/GoogleContainerTools/distroless)
 for supported variants and their contents.
 
-For Ruby, use the `-distroless` variant from the `ghcr.io/zewelor/ruby` registry;
-match the build image's Debian release.
+For projects already using `ghcr.io/zewelor/ruby`, consider its `-distroless`
+variant and match the build image's Debian release. Preserve a project's
+compatible maintained image provider unless a change is justified.
 
-Use the selected image's nonroot user (UID 65532 for Google Distroless `nonroot`)
+Default the image to its nonroot user (UID 65532 for Google Distroless `nonroot`)
 or an explicit numeric UID/GID. Keep application code and dependencies
 root-owned and readable/executable by that user; grant write ownership only
 to paths the application must modify. Create or mount those paths with the
@@ -226,11 +260,11 @@ RUN addgroup -g 1001 -S app && \
 USER 1001:1001
 ```
 
-Match this UID with the corresponding `user: "1001:1001"` in compose to avoid bind-mount permission mismatches between dev and prod.
-
 ## Ruby + Bundler
 
-Base images from the `ghcr.io/zewelor/ruby` registry: `-slim` variant for the build stage, matching `-distroless` variant for the runtime stage. Pin the tag in the Dockerfile to the Ruby version targeted.
+For projects using `ghcr.io/zewelor/ruby`, use its `-slim` build variant and
+compatible `-distroless` runtime variant. Otherwise use the project's compatible
+maintained Ruby images. Pin the tag to the Ruby version targeted.
 
 Critical settings:
 
@@ -274,17 +308,19 @@ including utilities, linters, formatters, and offline tests:
 
 ## Orchestration Security Hardening
 
-In `compose.yaml` and Kubernetes manifests, apply maximum sandboxing to prevent runtime escalations:
+Apply compatible hardening to the affected workload and verify required file
+access and startup behavior. Use the following Compose settings; translate them
+to the orchestrator's equivalent fields for Kubernetes rather than copying Compose keys:
 
 - `read_only: true` - read-only root filesystem; blocks installing malicious packages or altering static assets at runtime.
 - `security_opt: ["no-new-privileges:true"]` - blocks `setuid`/`setgid` privilege escalation.
 - `cap_drop: ["ALL"]` - drops all default kernel capabilities; restricts administrative syscalls.
-- `user: "1001:1001"` - always declare explicit non-root UID/GID unless using a natively nonroot base (Distroless `nonroot`).
+- `user` - keep the image's suitable user or choose a verified override through [Runtime users and bind mounts](#runtime-users-and-bind-mounts).
 
 Defense in depth and reliability:
 
 - Custom networks: define separate `frontend` and `backend` networks. Mark backend-only services with `internal: true` so a compromised frontend cannot reach the DB directly.
-- `deploy.resources.limits.cpus` and `memory` - prevent a runaway container from starving the host.
+- `deploy.resources.limits.cpus` and `memory` - configure supported limits and verify they are enforced. For rootless Docker, check cgroup v2, the systemd driver, and delegation of the required controllers; `Cgroup Driver: none` means cgroup limits are ignored. Do not treat successful Compose parsing as proof of enforcement.
 - `deploy.restart_policy.condition: on-failure` with `max_attempts: 3` - default resilience against crashes.
 - `build.target: <stage>` - select a specific multi-stage target (e.g., `live`, `distroless`, `dev`) per environment instead of building the whole Dockerfile.
 - For runtime secrets, prefer `*_FILE` env vars (e.g., `POSTGRES_PASSWORD_FILE: /run/secrets/db_password`) backed by Docker secrets or Kubernetes `Secret` volumes - never `ENV` literals.
