@@ -109,7 +109,7 @@ A missing or thin `.dockerignore` sends the entire repo to the Docker daemon on 
 
 - Build time: multi-GB context over network for every `docker build`.
 - Secret leakage: `.env`, `*.pem`, `id_rsa` get baked into image layers, visible in `docker history` even after `rm`.
-- Cache invalidation: any timestamp change in the context invalidates layers.
+- Cache invalidation: changes to files used by `COPY`/`ADD` can invalidate downstream layers; changes to `mtime` alone do not.
 
 Minimum `.dockerignore` for most projects:
 
@@ -319,7 +319,7 @@ to the orchestrator's equivalent fields for Kubernetes rather than copying Compo
 
 Defense in depth and reliability:
 
-- Custom networks: define separate `frontend` and `backend` networks. Mark backend-only services with `internal: true` so a compromised frontend cannot reach the DB directly.
+- Custom networks: connect services only to networks needed for communication; keep a frontend off the DB's network when it needs no direct DB access. Use `internal: true` for external isolation; services sharing that network can still communicate.
 - `deploy.resources.limits.cpus` and `memory` - configure supported limits and verify they are enforced. For rootless Docker, check cgroup v2, the systemd driver, and delegation of the required controllers; `Cgroup Driver: none` means cgroup limits are ignored. Do not treat successful Compose parsing as proof of enforcement.
 - `deploy.restart_policy.condition: on-failure` with `max_attempts: 3` - default resilience against crashes.
 - `build.target: <stage>` - select a specific multi-stage target (e.g., `live`, `distroless`, `dev`) per environment instead of building the whole Dockerfile.
