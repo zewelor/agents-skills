@@ -1,0 +1,4 @@
+interface:
+  display_name: "Renovate Maintainer"
+  short_description: "Simplify and verify Renovate configuration"
+  default_prompt: "Use $renovate-maintainer to maintain Renovate configuration and verify dependency detection and update policy."
