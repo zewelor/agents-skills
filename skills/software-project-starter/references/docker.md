@@ -4,6 +4,10 @@ Use Docker for the agreed development, service, or distribution workflow.
 Preserve existing wrappers and commands; distinguish running containers from
 building project-owned images.
 
+Prefer publisher-maintained GHCR images over Docker Hub when the required
+version and target platforms are available. Verify the registry in the
+publisher's official documentation.
+
 Apply the build guidance below when building project-owned images. Inspect
 each build's context directory, Dockerfile, and effective ignore file; maintain
 ignore rules for that context. Use Docker's actual filtering, including negated

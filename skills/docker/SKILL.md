@@ -70,6 +70,15 @@ and [limitations](https://docs.docker.com/engine/security/rootless/troubleshoot/
 
 ### Image workflow
 
+Prefer publisher-maintained GHCR images over Docker Hub when the required
+version and target platforms are available; otherwise keep the current provider.
+Verify the registry in official publisher documentation, avoid unofficial
+mirrors, and pin the version and verified digest. When migrating registries,
+preserve the version and update matching Renovate or Dependabot package rules.
+
+For uv, copy `/uv` and `/uvx` from `ghcr.io/astral-sh/uv` into the build stage;
+follow the [official Docker guide](https://docs.astral.sh/uv/guides/integration/docker/).
+
 1. Identify the project language/runtime (Go, Node, Python, Ruby, or other). Pick the matching `deps` pattern below.
 2. Pick the smallest viable runtime using [Minimal Non-Root Runtimes](#minimal-non-root-runtimes). Start truly static binaries with `scratch` and required runtime data; expand only for demonstrated needs.
 3. Choose variable lifetime: use `ARG` for build-only versions, source revisions, toolchain paths, and compiler flags (including across later `RUN` instructions in the same stage); use `ENV` for values intentionally kept in the image or the build-stage environment, such as `PATH`. Re-declare global `ARG` after `FROM` when needed. Pass credentials through BuildKit secret or SSH mounts, never `ARG` or `ENV`.
