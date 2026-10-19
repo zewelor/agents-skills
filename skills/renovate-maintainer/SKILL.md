@@ -13,6 +13,9 @@ keep audit-only work read-only and reuse authorization already given.
 
 - Read the configuration, inherited presets, affected version declarations, and
   existing validation commands. Determine the Renovate version when available.
+- Keep one repository configuration entry point. Check filename precedence:
+  root configuration files take precedence over `.github/` files by default;
+  account for any runner override of `configFileNames`.
 - Identify built-in and custom managers, datasource and versioning requirements,
   and exceptions such as a stable-channel custom datasource.
 - Preserve detected dependencies and effective schedules, automerge, release-age,
@@ -59,6 +62,10 @@ ARG ANSIBLE_VERSION=2.20.0
   [configuration documentation](https://docs.renovatebot.com/configuration-options/#packagerules).
 - When a registry migration is in scope, preserve the version and intended policy,
   verify the new image digest, and update package-name matchers for the new reference.
+- For Node.js Docker bases with distribution tags, extend
+  [`workarounds:nodeDockerVersioning`](https://docs.renovatebot.com/presets-workarounds/#workaroundsnodedockerversioning)
+  to follow LTS schedules with `ignoreUnstable: true`. Add `allowedVersions`
+  when the project must stay on a specific LTS major.
 
 ## Verify the result
 

@@ -81,7 +81,7 @@ follow the [official Docker guide](https://docs.astral.sh/uv/guides/integration/
 
 1. Identify the project language/runtime (Go, Node, Python, Ruby, or other). Pick the matching `deps` pattern below.
 2. Pick the smallest viable runtime using [Minimal Non-Root Runtimes](#minimal-non-root-runtimes). Start truly static binaries with `scratch` and required runtime data; expand only for demonstrated needs.
-3. Choose variable lifetime: use `ARG` for build-only versions, source revisions, toolchain paths, and compiler flags (including across later `RUN` instructions in the same stage); use `ENV` for values intentionally kept in the image or the build-stage environment, such as `PATH`. Re-declare global `ARG` after `FROM` when needed. Pass credentials through BuildKit secret or SSH mounts, never `ARG` or `ENV`.
+3. Choose variable lifetime: use `ARG` for build-only versions, source revisions, toolchain paths, and compiler flags (including across later `RUN` instructions in the same stage); use `ENV` for values intentionally kept in the image or the build-stage environment, such as `PATH`. Re-declare global `ARG` after `FROM` when needed. Pass credentials through BuildKit secret or SSH mounts, never `ARG` or `ENV`. For automatic platform arguments, follow [Cross-Platform Builds](#cross-platform-builds).
 4. Apply layer-cache hygiene: copy lockfiles before source, set `BUNDLE_PATH` outside the app dir for Ruby, use `--mount=type=cache` only when there are external dependencies.
 5. If Compose is in scope, apply compatible runtime hardening from the orchestration section and select `build.target` when needed.
 6. Apply per-stage cleanup in the same RUN: `apt-get clean && rm -rf /var/lib/apt/lists/*`; `npm cache clean --force`; `rm -rf /usr/share/doc /usr/share/man` before the runtime stage.
@@ -166,9 +166,29 @@ Requires BuildKit (Docker 23+).
 ## Cross-Platform Builds
 
 Keep compilation on the build platform when the toolchain supports native
-cross-compilation. Use `FROM --platform=$BUILDPLATFORM`, declare only the
-automatic platform arguments the Dockerfile consumes (`TARGETOS`,
-`TARGETARCH`, or `TARGETPLATFORM`), and emit the target artifact explicitly.
+cross-compilation. Use `FROM --platform=$BUILDPLATFORM` and declare only the
+automatic platform arguments the Dockerfile consumes, such as `TARGETOS`,
+`TARGETARCH`, or `TARGETPLATFORM`, inside the build stage **without defaults**.
+Do not assign values such as `ARG TARGETARCH=amd64` or `ARG TARGETOS=linux`:
+these override BuildKit's target values and can put a binary for the wrong
+architecture inside an otherwise correctly labeled image.
+
+For a static Go build, inherit the requested platform explicitly:
+
+```dockerfile
+ARG TARGETOS
+ARG TARGETARCH
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o /out/app ./cmd/app
+```
+
+Follow [Docker's cross-compilation example](https://docs.docker.com/build/building/multi-platform/#cross-compilation)
+for the complete build-stage pattern. When adding or changing cross-compilation,
+verify an affected non-native artifact's architecture with `file`, `readelf`, or
+an equivalent tool where available. A successful build or image platform label
+alone does not prove the binary's architecture; report unavailable verification.
+Keep this a one-off check unless an existing release contract or the user calls
+for ongoing coverage. Do not add persistent ARM64 checks, multi-platform CI
+matrices, or emulation solely because the Dockerfile supports cross-compilation.
 
 Require QEMU/binfmt only when a build stage executes target-architecture
 binaries. Do not add emulation for a Go build that runs on `$BUILDPLATFORM` and
