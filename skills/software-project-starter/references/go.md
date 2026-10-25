@@ -15,30 +15,23 @@ Choose validation for the contracts that exist: command/API behavior, persistenc
 failure recovery, and cancellation. Use the race detector for shared-state
 concurrency and built-in fuzzing for meaningful input properties when warranted.
 
-## Select optional Go skills
+## Go skills
 
-Use this section when the user requests companion skills or approves a proposal
-addressing a concrete gap; otherwise skip catalog lookup and selection. Once
-companion installation is in scope, inspect the current catalog:
+Inspect existing project skills and the current catalog:
 
 ```text
 npx skills add samber/cc-skills-golang --list
 ```
 
-Map candidates to actual responsibilities:
+Start with `golang-code-style`, `golang-error-handling`, and `golang-testing`.
+Reuse equivalent project guidance and explain omitted baseline capabilities.
+Add candidates for actual project needs, for example `golang-cli` for CLIs,
+`golang-context` for cancellation/deadlines, `golang-security` for secrets or
+networking, `golang-database` for SQL, and `golang-concurrency` for concurrent work.
+Discover other candidates from the catalog rather than treating these examples
+as an exhaustive list.
 
-- Consider `golang-code-style`, `golang-naming`, `golang-modernize`,
-  `golang-error-handling`, and `golang-testing` for maintained Go work.
-- Add `golang-project-layout` for multiple packages or commands.
-- Add `golang-context` for I/O, cancellation, services, workers, or databases.
-- Add `golang-database` for selected persistence and `golang-concurrency` for
-  goroutines, workers, pipelines, or shared state.
-- Add `golang-security` for secrets, authentication, untrusted input, or networking.
-- Add `golang-dependency-management` for external modules or dependency automation.
-- Add `golang-lint` and `golang-continuous-integration` only for selected lint/CI.
-
-Resolve selection with the user and install only approved skills. Use the
-project's chosen agent and copy settings. For an approved copy/all-agent setup,
-use repeated `--skill <name>`, `--agent '*'`, `--copy`, and `-y`. Review generated
-directories and lock metadata after installation.
-Keep this catalog as candidates rather than a mandatory bundle.
+Read shortlisted descriptions and relevant instructions; keep the smallest set
+that fits the contract without overlapping guidance or conflicting requirements.
+Follow the [shared workflow](automation.md#select-repository-local-skills) for
+installation, verification, and recording the selection and its reasons.

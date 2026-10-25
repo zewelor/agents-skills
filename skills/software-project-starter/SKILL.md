@@ -20,6 +20,25 @@ these defaults; reuse decisions and authorization already established.
   Ask only about unresolved choices that materially affect scope or design;
   recommend the simplest adequate option.
 
+## Select supporting guidance
+
+Before implementation, select project-local skills using the stack guidance and
+[installation workflow](references/automation.md#select-repository-local-skills).
+
+- [Automation](references/automation.md): read for every new-project bootstrap.
+  Include GitHub Actions CI by default unless explicitly excluded; ask about
+  Renovate and Docker only when those choices are undecided.
+- [Testing](references/testing.md): briefly assess PBT, stateful testing, and
+  formal methods against concrete risks before finalizing the contract.
+- [Project documents](references/project-docs.md): for contracts, plans, and
+  durable project guidance.
+- [Docker](references/docker.md): after Docker is selected; apply image-build
+  guidance when building project-owned images.
+- [Go](references/go.md) or [Ruby](references/ruby.md): for the selected stack.
+
+For other stacks, reuse project conventions. Consult official documentation for
+version-sensitive choices; add new references only when real use warrants them.
+
 ## Plan the MVP
 
 - Tie scope, dependencies, abstractions, and configuration to the first useful
@@ -35,24 +54,6 @@ these defaults; reuse decisions and authorization already established.
   numerical thresholds; read the project-documents guidance for details.
 - Present the compact plan, then implement when authorized and material decisions
   are settled. For a specification-only request, deliver the documents.
-
-## Select supporting guidance
-
-Read the references relevant to this project:
-
-- [Automation](references/automation.md): read for every new-project bootstrap.
-  Include GitHub Actions CI by default unless explicitly excluded; ask about
-  Renovate and Docker only when those choices are undecided.
-- [Testing](references/testing.md): briefly assess PBT, stateful testing, and
-  formal methods against concrete risks before finalizing the contract.
-- [Project documents](references/project-docs.md): for contracts, plans, and
-  durable project guidance.
-- [Docker](references/docker.md): after Docker is selected; apply image-build
-  guidance when building project-owned images.
-- [Go](references/go.md) or [Ruby](references/ruby.md): for the selected stack.
-
-For other stacks, reuse project conventions. Consult official documentation for
-version-sensitive choices; add new references only when real use warrants them.
 
 ## Complete the work
 

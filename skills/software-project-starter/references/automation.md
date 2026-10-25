@@ -7,8 +7,8 @@ exclusions and prior authorization instead of asking again.
 
 Resolve other optional surfaces only where relevant: Docker/Compose, persistence
 and migrations, releases, image platforms, SBOM/scanning/signing, local hooks,
-changelog automation, and repository-local skills. Keep rejected machinery out
-of the scaffold. Preserve tools already required by the project contract.
+and changelog automation. Keep rejected machinery out of the scaffold. Preserve
+tools already required by the project contract.
 
 ## Configure selected automation
 
@@ -37,16 +37,22 @@ when selected; exclude hook files from images that do not need them.
 
 ## Select repository-local skills
 
-Inspect the current source catalog and propose only skills needed by the
-contract. Reuse approved selections; resolve missing install authorization before
-mutating the skill environment. Keep the skill itself usable without companions.
+Include justified project-local skills in an authorized bootstrap; for planning-only
+work, recommend without installing. Allow an empty set when existing project guidance
+suffices. Reuse delegated selection/install approval; ask once for the concrete set
+only when installation is outside the granted scope. Respect user exclusions.
+Do not change global skills or add unrelated tools, dependencies, or project scope.
 
-After selection, use `npx skills add <source> --skill <name>` for named skills;
-use the project's agent/copy settings and verify `.agents/skills`, installation
-metadata in `skills-lock.json`, and `npx skills list --json`. For targeted updates,
-use `npx skills update <skill-name> -p -y`. Inspect local divergence first and
-review the installed diff; keep authoring changes in the source repository.
+Install selected skills with `npx skills add <source> --skill <name>` and the chosen
+agent/copy settings. For an approved copy/all-agent setup, use repeated `--skill`
+options with `--agent '*' --copy -y`. Verify `.agents/skills`, provenance in
+`skills-lock.json`, and `npx skills list --json`. Report discovery/install failures
+and unverified checks; continue independent work without claiming installation
+succeeded. Keep the starter usable without companions.
 
-Record selected skills and update/review policy in the project documents. Keep
-skill installation as a separately reviewable bootstrap step when it affects the
-project workflow. Exclude agent-owned directories from linting and formatting.
+Record the selection, brief reasons, and update policy in existing project docs.
+Update individual skills with `npx skills update <skill-name> -p -y`; inspect local
+divergence first and review installed files and lock metadata afterward. Keep
+authoring changes in the source repository; do not overwrite divergent local edits.
+Keep skill installation separately reviewable. Exclude agent-owned directories
+from linting and formatting.
