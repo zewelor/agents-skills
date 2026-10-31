@@ -13,9 +13,12 @@ keep audit-only work read-only and reuse authorization already given.
 
 - Read the configuration, inherited presets, affected version declarations, and
   existing validation commands. Determine the Renovate version when available.
-- Keep one repository configuration entry point. Check filename precedence:
-  root configuration files take precedence over `.github/` files by default;
-  account for any runner override of `configFileNames`.
+- Keep one repository configuration entry point. For new repositories, prefer
+  `.github/renovate.json` unless the user or project conventions select another
+  location. Preserve the existing entry point in established repositories unless
+  relocation is requested. Renovate uses the first matching filename; check its
+  [search order](https://docs.renovatebot.com/configuration-options/#locations-for-configuration-filenames)
+  and any runner additions to `configFileNames`.
 - Identify built-in and custom managers, datasource and versioning requirements,
   and exceptions such as a stable-channel custom datasource.
 - Preserve detected dependencies and effective schedules, automerge, release-age,

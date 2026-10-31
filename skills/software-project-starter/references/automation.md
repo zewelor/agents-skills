@@ -16,8 +16,9 @@ tools already required by the project contract.
   Use prereleases only when explicitly selected; keep runtime declarations aligned.
 - Pin Actions by full commit SHA with a version comment and container images by
   digest. Configure only required dependency managers and update classes.
-- For Renovate, establish automerge scope. Use `$renovate-maintainer`, if available,
-  to configure managers and package rules. For CI, establish blocking checks.
+- For Renovate, establish automerge scope. If `$renovate-maintainer` is available,
+  read it before choosing the configuration location or creating the file; follow
+  its guidance for managers and package rules. For CI, establish blocking checks.
   Publish only selected image platforms; justify release machinery and dependencies.
 - Keep credentials in the project's established secret mechanism. Keep required
   configuration explicit and failures visible.
