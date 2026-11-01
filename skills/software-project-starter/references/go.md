@@ -5,6 +5,10 @@ workflow. Prefer standard-library facilities and shallow packages until actual
 responsibilities justify more structure. Prefer direct SQL when persistence
 needs no framework; keep abstractions tied to present consumers and behavior.
 
+For new Go executables, keep code and colocated tests in `cmd/<binary>/`, even
+for small single-package CLIs. Preserve established layouts and public library
+import paths.
+
 Follow idiomatic names, explicit error wrapping, context propagation for I/O,
 graceful cancellation, and ownership of concurrent state. Justify interfaces
 through a real boundary or implementation need rather than future possibilities.
