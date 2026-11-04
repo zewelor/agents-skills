@@ -1,0 +1,4 @@
+interface:
+  display_name: "Software Engineering"
+  short_description: "Apply focused software engineering practices"
+  default_prompt: "Use $software-engineering to implement, fix, or refactor software with focused verification."

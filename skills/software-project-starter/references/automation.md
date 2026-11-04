@@ -44,6 +44,16 @@ suffices. Reuse delegated selection/install approval; ask once for the concrete 
 only when installation is outside the granted scope. Respect user exclusions.
 Do not change global skills or add unrelated tools, dependencies, or project scope.
 
+Consider [software-engineering](https://github.com/zewelor/agents-skills/blob/main/skills/software-engineering/SKILL.md)
+as an optional candidate when focused coding guidance would fill a real gap;
+omit it when existing instructions are sufficient. Read its description and
+instructions before selecting it. If selected, use this source with the shared
+installation settings below:
+
+```sh
+npx skills add zewelor/agents-skills --skill software-engineering
+```
+
 Install selected skills with `npx skills add <source> --skill <name>` and the chosen
 agent/copy settings. For an approved copy/all-agent setup, use repeated `--skill`
 options with `--agent '*' --copy -y`. Verify `.agents/skills`, provenance in
