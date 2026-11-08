@@ -1,0 +1,6 @@
+interface:
+  display_name: "Structural Review"
+  short_description: "Find structural risks and choose useful next actions"
+  default_prompt: "Use $structural-review to inspect the current work and suggest the most useful evidence-backed follow-ups."
+policy:
+  allow_implicit_invocation: false
