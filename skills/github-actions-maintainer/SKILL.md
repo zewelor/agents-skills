@@ -79,8 +79,10 @@ Use this baseline and add scopes only when a step proves the requirement:
 - Pin other third-party actions to a verified full-length commit SHA and retain
   a version comment when useful for reviewability.
 - Never use moving branch references such as `@main` or `@master`.
-- Let Renovate or Dependabot maintain action references and review major-version
-  changes deliberately.
+- Let Renovate or Dependabot maintain action references. When configuring
+  Renovate automerge, use `$renovate-maintainer` if available. GitHub Actions
+  major updates may automerge after CI passes, subject to the user's scope and
+  explicit project exceptions.
 - Set `persist-credentials: false` on checkout unless later steps intentionally
   perform authenticated Git operations.
 
