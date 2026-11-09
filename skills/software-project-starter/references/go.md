@@ -15,6 +15,18 @@ through a real boundary or implementation need rather than future possibilities.
 Record selected tools with `go get -tool` when supported by the project's Go
 version; verify version-sensitive syntax before modifying the toolchain.
 
+When Renovate is selected and Go versions are declared in multiple places,
+group the Go module, build image, and CI version updates using their actual
+Renovate dependency names. Keep CI reading `go.mod` where practical. Configure
+the `go` directive to bump alongside the toolchain and record that this raises
+the minimum supported Go version. Validate extraction, grouping, and version
+replacements for the project's declarations; preserve its automerge policy.
+
+For each Go module, keep `go.mod` and `go.sum` tidy and configure CI to run
+`go mod tidy -diff` with the project Go version. When Renovate is selected,
+enable `postUpdateOptions: ["gomodTidy"]` so dependency PRs include tidy changes.
+Review the resulting module changes; retain sums that Go still requires.
+
 Choose validation for the contracts that exist: command/API behavior, persistence,
 failure recovery, and cancellation. Use the race detector for shared-state
 concurrency and built-in fuzzing for meaningful input properties when warranted.
