@@ -59,19 +59,28 @@ ARG ANSIBLE_VERSION=2.20.0
 - Keep schedules, automerge, minimum release age, grouping, and allowed update types
   in `packageRules` or an existing shared preset. Keep dependency identity and
   version parsing beside the declaration where the custom manager supports it.
-- When a project adopts shared Actions or Go presets, consume those presets instead
-  of copying their rules. Keep project-specific policy and exceptions local;
-  verify preset resolution and effective rule order before and after migration.
+- For projects adopting [shared presets](https://github.com/zewelor/renovate-config),
+  use the applicable named presets instead of copying their rules: `github-actions`
+  for action automerge and `go` for Go grouping, module minimum bumps and
+  `gomodTidy`. Raising the `go.mod` minimum affects module consumers.
+  Check the preset documentation. By default, use
+  `github>zewelor/renovate-config//presets/<preset>` to follow the preset repository's
+  default branch. Pin a verified tag with `#<tag>` only when the project or user
+  has a reason to use a specific version; preserve existing pins unless changing
+  them is in scope. Unpinned presets can change when that branch changes.
+  Add presets after general presets in the existing `extends` list. Remove only
+  local rules they replace; preserve project-specific policies and exceptions,
+  including any existing policy for reusable workflows or other non-action
+  dependencies. Do not activate Renovate without the operator's authorization.
 - When creating a Renovate configuration or changing its automerge policy,
   default to automerging GitHub Actions updates, including major versions, after
   CI passes. Preserve the user's scope and explicit project exceptions. Match
   the `github-actions` manager and `action` dependency type to avoid changing
   policies for workflow images and tools. Verify that the automerge mechanism and
   repository protections enforce the intended CI checks; report if unverified.
-- When creating or modifying GitHub Actions workflows, default to
-  `runs-on: ubuntu-latest`. Choose another runner only when project requirements
-  justify it. When specifying a fixed Ubuntu version, add an adjacent YAML
-  comment explaining the specific reason for pinning it.
+- Preserve existing GitHub Actions runner labels, including architecture and
+  Ubuntu version, unless a runner change is in scope. If workflow changes are
+  needed, use `$github-actions-maintainer` when available.
 - Combine rules with identical policy using shared match criteria. Preserve rule
   ordering, inherited behavior, and intentional exceptions; compare effective policy,
   not just the number of rules. Check merge behavior in the
@@ -87,6 +96,10 @@ ARG ANSIBLE_VERSION=2.20.0
 
 - Run the official config validator with the repository's Renovate version and
   existing validation entry point. Resolve warnings relevant to the change.
+- For shared presets, also run an extraction dry-run and inspect the resolved
+  configuration and logs: config-validator success alone does not prove remote
+  `extends` resolution. Compare effective policy and required CI checks before
+  and after migration; distinguish this from an observed hosted bot run.
 - For manager changes, run local extraction against a snapshot containing current
   edits. Compare dependency identities, versions, datasource and parsing metadata
   before and after; detect lost or duplicate dependencies.

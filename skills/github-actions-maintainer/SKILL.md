@@ -97,6 +97,15 @@ runtime users, and BuildKit cache mounts. Keep workflow orchestration here.
   pull a private image.
 - Build and smoke-test the native runner platform before publishing a
   multi-platform manifest when this gives useful fast feedback.
+- For multi-platform builds, inspect which stages execute target-architecture
+  binaries. Choose cross-compilation, QEMU, or native runners based on toolchain
+  support, compatibility, and comparable build times and cache conditions.
+  When publishing separate per-platform images, merge the manifest only after
+  the required builds succeed; per-platform digests can identify the inputs.
+- Treat successful cross-compilation and a multi-platform manifest as separate
+  from runtime verification. Add a native ARM smoke test when ARM runtime support
+  warrants ongoing coverage; do not add a matrix solely because cross-compilation
+  is supported.
 - Configure Buildx cache with both `cache-from` and `cache-to`. Select the backend based on workflow triggers and cache sharing requirements:
   - Use `type=gha,scope=${image_name}` for branch and PR workflows where builds run on `main` or feature branches and inherit branch cache without extra registry tags or package write permissions.
   - Use `type=registry,ref=${registry}/${image}:buildcache` when workflows are triggered from release tags (`refs/tags/v*`), release branches, or manual dispatches. GitHub Actions cache does not share across independent tag refs, whereas an OCI cache artifact in GHCR/registry is ref-independent, allowing new releases (`vX.Y.Z`) to reuse cache from previous tags.
@@ -151,8 +160,11 @@ runtime users, and BuildKit cache mounts. Keep workflow orchestration here.
 - Add concurrency groups for replaceable CI and use `cancel-in-progress: true`
   there. Do not cancel release or deployment jobs unless replacement is proven
   safe.
-- Default to `ubuntu-latest`. Use a different runner only for a concrete project
-  requirement; document a fixed Ubuntu version with an adjacent YAML comment.
+- Preserve existing runner labels, including architecture and Ubuntu version,
+  unless changing them is in scope. For new jobs, default to `ubuntu-latest` on
+  x64; use a native ARM runner when needed. Verify available labels in current
+  GitHub documentation and explain a fixed Ubuntu version in an adjacent YAML
+  comment.
 - Keep shell commands fail-fast and quote variables. Avoid embedding secrets in
   command lines or logs.
 - Run repository-native validation first. Run `actionlint` and `zizmor` when
