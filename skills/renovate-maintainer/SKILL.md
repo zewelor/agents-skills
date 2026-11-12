@@ -78,6 +78,9 @@ ARG ANSIBLE_VERSION=2.20.0
   the `github-actions` manager and `action` dependency type to avoid changing
   policies for workflow images and tools. Verify that the automerge mechanism and
   repository protections enforce the intended CI checks; report if unverified.
+- In Ubuntu CI, prefer the official APT package for `just` after checking recipe
+  compatibility. Let Ubuntu manage updates and remove obsolete Renovate rules.
+  Report incompatibilities and choose another runner or installer within scope.
 - Preserve existing GitHub Actions runner labels, including architecture and
   Ubuntu version, unless a runner change is in scope. If workflow changes are
   needed, use `$github-actions-maintainer` when available.
