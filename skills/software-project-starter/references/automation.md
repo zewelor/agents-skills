@@ -16,7 +16,12 @@ tools already required by the project contract.
   Use prereleases only when explicitly selected; keep runtime declarations aligned.
 - Pin Actions by full commit SHA with a version comment and container images by
   digest. Configure only required dependency managers and update classes.
-- For Renovate, establish automerge scope. If `$renovate-maintainer` is available,
+- Default GitHub Actions workflows to `ubuntu-latest`. Use another runner only
+  for a concrete project requirement; explain a fixed Ubuntu version in an
+  adjacent YAML comment.
+- For Renovate, use existing shared presets when adopted by the project, retain
+  local exceptions, and establish automerge scope. Verify effective rules and CI
+  protections. If `$renovate-maintainer` is available,
   read it before choosing the configuration location or creating the file; follow
   its guidance for managers and package rules. For CI, establish blocking checks.
   Publish only selected image platforms; justify release machinery and dependencies.

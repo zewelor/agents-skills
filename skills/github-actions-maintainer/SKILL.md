@@ -82,7 +82,9 @@ Use this baseline and add scopes only when a step proves the requirement:
 - Let Renovate or Dependabot maintain action references. When configuring
   Renovate automerge, use `$renovate-maintainer` if available. GitHub Actions
   major updates may automerge after CI passes, subject to the user's scope and
-  explicit project exceptions.
+  explicit project exceptions. Use an existing shared Actions preset when the
+  project adopts one; retain local workflow exceptions and verify required CI
+  checks and automerge behavior.
 - Set `persist-credentials: false` on checkout unless later steps intentionally
   perform authenticated Git operations.
 
@@ -149,8 +151,8 @@ runtime users, and BuildKit cache mounts. Keep workflow orchestration here.
 - Add concurrency groups for replaceable CI and use `cancel-in-progress: true`
   there. Do not cancel release or deployment jobs unless replacement is proven
   safe.
-- Prefer an explicit runner generation when reproducibility outweighs automatic
-  runner updates.
+- Default to `ubuntu-latest`. Use a different runner only for a concrete project
+  requirement; document a fixed Ubuntu version with an adjacent YAML comment.
 - Keep shell commands fail-fast and quote variables. Avoid embedding secrets in
   command lines or logs.
 - Run repository-native validation first. Run `actionlint` and `zizmor` when

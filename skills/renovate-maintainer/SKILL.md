@@ -59,12 +59,19 @@ ARG ANSIBLE_VERSION=2.20.0
 - Keep schedules, automerge, minimum release age, grouping, and allowed update types
   in `packageRules` or an existing shared preset. Keep dependency identity and
   version parsing beside the declaration where the custom manager supports it.
+- When a project adopts shared Actions or Go presets, consume those presets instead
+  of copying their rules. Keep project-specific policy and exceptions local;
+  verify preset resolution and effective rule order before and after migration.
 - When creating a Renovate configuration or changing its automerge policy,
   default to automerging GitHub Actions updates, including major versions, after
   CI passes. Preserve the user's scope and explicit project exceptions. Match
   the `github-actions` manager and `action` dependency type to avoid changing
   policies for workflow images and tools. Verify that the automerge mechanism and
   repository protections enforce the intended CI checks; report if unverified.
+- When creating or modifying GitHub Actions workflows, default to
+  `runs-on: ubuntu-latest`. Choose another runner only when project requirements
+  justify it. When specifying a fixed Ubuntu version, add an adjacent YAML
+  comment explaining the specific reason for pinning it.
 - Combine rules with identical policy using shared match criteria. Preserve rule
   ordering, inherited behavior, and intentional exceptions; compare effective policy,
   not just the number of rules. Check merge behavior in the
