@@ -14,7 +14,8 @@ permissions, credentials, or publication conditions.
 1. Read repository instructions and inspect every caller and reusable workflow
    involved in the requested path.
 2. Inventory triggers, job dependencies, permissions, secrets, environments,
-   third-party actions, caches, artifacts, and publication side effects.
+   third-party actions, caches, artifacts, and publication side effects. Establish
+   which changes and events require each job using Execution Selection below.
 3. Classify each job as untrusted verification, trusted build, or privileged
    publication/deployment.
 4. Assign the smallest permissions and secrets to each job. Split jobs when a
@@ -26,6 +27,66 @@ permissions, credentials, or publication conditions.
 7. Report remaining operational setup separately from code changes. Preserve
    unrelated work and do not publish, release, or change repository settings
    without explicit authorization.
+
+## Execution Selection
+
+- Start with the repository's release unit and simplest sufficient flow. For one
+  application, prefer native workflow triggers, verification jobs, and publication
+  gated by `needs`. Publishing the fully verified revision on every qualifying
+  main run is a valid simplicity tradeoff; explain that test/config changes may
+  publish too. Distinguish latest successful state from every pushed tip or every
+  commit within a push; pending replacement cannot satisfy an every-run contract.
+  Split workflows for independently released components when their triggers and
+  concurrency can be independent. Reuse verification through
+  `workflow_call` when useful; moving conditions to another file is not simplification.
+- Keep native exclusions for inputs outside the release unit. A skipped workflow
+  does not replace a pending run; distinguish that from an admitted run that
+  cancels verification or skips publication through a per-push image filter.
+  Do not remove all path filters merely because pending replacement is possible.
+- Match guarantees to the actual requirement. For a small project accepting
+  latest-successful publication and explicit reruns, prefer native `needs` and
+  concurrency. Add custom promotion scripts, ancestry checks or registry state
+  only for a demonstrated stricter requirement; compare their ongoing cost with
+  the accepted race. Do not add application-language tests solely for CI glue.
+- Separate eligibility to verify, build an artifact, publish it, and deploy it.
+  Successful verification is a prerequisite for publication, not evidence that
+  the change requires a new release. Preserve intentional tag, manual, scheduled
+  rebuild and per-commit release contracts; state any authorized policy change.
+- Derive each artifact's inputs from its actual build: source, dependencies,
+  embedded assets, generated inputs, Dockerfile stages, COPY and ignore rules.
+  A test database, Compose fixture or CI tool update may require integration
+  checks without requiring a production image. Documentation may be embedded;
+  do not exclude it by filename alone. Treat independently deployed components
+  separately, including their shared inputs.
+- Inspect overlapping workflows and `push`/`pull_request` triggers. Prefer one
+  verification per intended revision/event; preserve branch-before-PR checks
+  when required by the repository or automation. Concurrency keyed by ref does
+  not deduplicate a branch push and its PR merge ref.
+- Choose the simplest mechanism that preserves these boundaries. Native path
+  filters suit whole workflows; job conditions suit differing scopes or required
+  checks that must report success. Check required-status behavior before filtering
+  a workflow. Prefer existing helpers or documented tooling over custom diff logic.
+- When comparing changes, verify the chosen tool's push, PR, initial-branch and
+  manual/tag semantics. Cover multi-commit pushes, deletions and renames; unavailable
+  comparison data must fail visibly, not silently skip required work. Keep source
+  lists aligned with build inputs and avoid weakening tested-artifact guarantees.
+- Evaluate selection together with concurrency and release state. A diff against
+  the previous push does not include unpublished changes from a cancelled, failed,
+  or replaced run. Even `cancel-in-progress: false` can replace a pending run.
+  Cancel superseded verification only when its replacement still covers the full
+  release unit. Use independent component triggers/concurrency or a verified
+  successful-publication baseline when selective publication is required; do not
+  add persisted tracking when publishing each qualifying run meets the task.
+  Treat an already-started external publication separately: cancellation does not
+  roll back side effects. Preserve intentional manual retry/recovery contracts.
+- Before editing filters, record representative change/event cases and expected
+  jobs: production input, test/fixture-only, docs/tooling-only, mixed changes,
+  PR and main push, plus supported release events. Validate both required runs
+  and required skips against the resulting configuration. Report local selection
+  evidence separately from hosted runs or measured savings. Include sequences:
+  runtime then tests-only, component A then B, pending replacement, cancelled or
+  failed verification/publication, and rerun. Check which complete revision and
+  components are ultimately published, not only each run's isolated predicate.
 
 ## Trust and Event Boundaries
 
@@ -79,7 +140,8 @@ Use this baseline and add scopes only when a step proves the requirement:
 - Pin other third-party actions to a verified full-length commit SHA and retain
   a version comment when useful for reviewability.
 - Never use moving branch references such as `@main` or `@master`.
-- Let Renovate or Dependabot maintain action references. When configuring
+- When dependency automation is in scope, use the repository's Renovate or
+  Dependabot setup to maintain action references. When configuring
   Renovate automerge, use `$renovate-maintainer` if available. GitHub Actions
   major updates may automerge after CI passes, subject to the user's scope and
   explicit project exceptions. Use an existing shared Actions preset when the
@@ -106,9 +168,10 @@ runtime users, and BuildKit cache mounts. Keep workflow orchestration here.
   from runtime verification. Add a native ARM smoke test when ARM runtime support
   warrants ongoing coverage; do not add a matrix solely because cross-compilation
   is supported.
-- Configure Buildx cache with both `cache-from` and `cache-to`. Select the backend based on workflow triggers and cache sharing requirements:
+- When configuring Buildx cache, select restore/export behavior and backend from
+  the actual producers and consumers; preserve deliberate restore-only jobs:
   - Use `type=gha,scope=${image_name}` for branch and PR workflows where builds run on `main` or feature branches and inherit branch cache without extra registry tags or package write permissions.
-  - Use `type=registry,ref=${registry}/${image}:buildcache` when workflows are triggered from release tags (`refs/tags/v*`), release branches, or manual dispatches. GitHub Actions cache does not share across independent tag refs, whereas an OCI cache artifact in GHCR/registry is ref-independent, allowing new releases (`vX.Y.Z`) to reuse cache from previous tags.
+  - Consider `type=registry,ref=${registry}/${image}:buildcache` when cross-ref reuse beyond GitHub cache visibility is needed. GitHub cache can restore from the current and default branch, and PRs also from their base branch; different tags cannot restore each other's caches. A manual event alone does not require registry cache, and tag runs may reuse default-branch cache. Verify the required sharing before adding registry writes.
   - Specify the full OCI reference (`ghcr.io/owner/repo:buildcache`) for registry cache and grant the job `packages: write` permissions.
   - Whenever configuring `type=registry` or switching cache backends, add an inline comment directly next to the cache configuration in the workflow file explaining why that backend was chosen (e.g. noting that tag-triggered builds require registry cache to share layers across release tags).
 - Use `mode=max` when intermediate build stages (downloaded dependencies, compiler caches) should be exported.
@@ -121,9 +184,13 @@ runtime users, and BuildKit cache mounts. Keep workflow orchestration here.
 - Add QEMU/binfmt only when a build executes target-architecture binaries.
   Omit it when a toolchain runs on `$BUILDPLATFORM` and cross-compiles artifacts
   for `TARGETOS`/`TARGETARCH`.
-- Prove cache behavior from at least two comparable workflow runs. Configuration
-  proves wiring; logs showing cache import and cached layers prove reuse.
-- Clean up GHCR packages after image publication in jobs with `packages: write` using `dataaxiom/ghcr-cleanup-action`. Protect all persistent/rolling release channels (e.g. `latest`, `stable`, `edge`) in `exclude-tags`:
+- When changing cache behavior or claiming reuse/performance improvements, use
+  comparable hosted runs to prove restore/export and reuse. Configuration alone
+  proves wiring. Do not require cache experiments for unrelated workflow edits.
+- When GHCR retention is in scope, run cleanup only after successful image
+  publication, in a job with `packages: write`. Preserve the repository's retention
+  policy. For `dataaxiom/ghcr-cleanup-action`, protect persistent/rolling release
+  channels (e.g. `latest`, `stable`, `edge`) in `exclude-tags`:
 
   ```yaml
   - name: Delete old images
@@ -157,9 +224,15 @@ runtime users, and BuildKit cache mounts. Keep workflow orchestration here.
   `wait`/`wait-all` to synchronize, and `cancel` to stop background services.
   Check the [workflow syntax documentation](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstepsparallel)
   before implementation.
-- Add concurrency groups for replaceable CI and use `cancel-in-progress: true`
-  there. Do not cancel release or deployment jobs unless replacement is proven
-  safe.
+- Scope concurrency to the release unit and apply the sequence checks in Execution
+  Selection before enabling cancellation or replacing pending runs. Keep reusable
+  workflow groups from unintentionally cancelling their callers or unrelated work.
+  Group writes by their shared mutable destination: separate branch/tag/manual
+  groups can still race on `latest`. Unique run groups prevent replacement but
+  allow overlapping writers. Serialization does not guarantee commit-order dispatch;
+  state the intended behavior for old-ref reruns and manual publications. Preserve
+  unique tag/manual run groups when every request must be retained; changing them
+  to a shared group also authorizes pending replacement and needs a policy decision.
 - Preserve existing runner labels, including architecture and Ubuntu version,
   unless changing them is in scope. For new jobs, default to `ubuntu-latest` on
   x64; use a native ARM runner when needed. Verify available labels in current
@@ -172,9 +245,11 @@ runtime users, and BuildKit cache mounts. Keep workflow orchestration here.
   approval.
 - Parse every changed workflow as YAML and inspect the complete caller/callee
   permission chain.
-- For Docker workflows, run the narrow Dockerfile lint and smoke build defined
-  by the repository. Treat a successful native smoke build as different from a
-  successful multi-platform push.
+- For changes to Docker inputs or build/smoke commands, run the relevant
+  repository Dockerfile lint and smoke build. For selection-only changes, validate
+  event/path decisions and workflow syntax; do not add full application or image
+  suites unless repository requirements or an identified risk require them.
+  Treat a native smoke build as different from a multi-platform push.
 - Finish with `git diff --check` and a focused diff review. State which behavior
   was validated locally, which was verified in Actions, and which remains
   pending a trusted publish or deployment event.
