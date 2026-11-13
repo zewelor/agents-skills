@@ -140,6 +140,11 @@ Use this baseline and add scopes only when a step proves the requirement:
 - Pin other third-party actions to a verified full-length commit SHA and retain
   a version comment when useful for reviewability.
 - Never use moving branch references such as `@main` or `@master`.
+- Inspect nested action references in composite or wrapper manifests before
+  passing secrets or write-scoped tokens. Follow the executable action chain:
+  pinning the outer wrapper leaves nested branch/tag references mutable. Pin
+  the privileged chain to reviewed SHAs, or use a small native step when the
+  wrapper adds unnecessary credential exposure.
 - When dependency automation is in scope, use the repository's Renovate or
   Dependabot setup to maintain action references. When configuring
   Renovate automerge, use `$renovate-maintainer` if available. GitHub Actions
@@ -240,6 +245,10 @@ runtime users, and BuildKit cache mounts. Keep workflow orchestration here.
   comment.
 - Keep shell commands fail-fast and quote variables. Avoid embedding secrets in
   command lines or logs.
+- Retry only an operation that is safe to repeat. Bound attempts and elapsed
+  time, and propagate failure after exhaustion. Check recovery and permanent
+  failure with harmless fixtures; account for wrapper pre/post hooks before
+  assuming how many times a command executes.
 - Run repository-native validation first. Run `actionlint` and `zizmor` when
   already available; do not install missing tools automatically without user
   approval.
