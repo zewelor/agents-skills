@@ -10,6 +10,20 @@ and migrations, releases, image platforms, SBOM/scanning/signing, local hooks,
 and changelog automation. Keep rejected machinery out of the scaffold. Preserve
 tools already required by the project contract.
 
+## Configure new GitHub repositories
+
+After authorized GitHub repository creation, apply these defaults:
+
+```sh
+gh repo edit OWNER/REPO --enable-merge-commit=false --enable-wiki=false \
+  --delete-branch-on-merge=true
+```
+
+Read back `allow_merge_commit=false`, `has_wiki=false`, and
+`delete_branch_on_merge=true`; report configuration or verification failures.
+For planning-only or local-only work, record the defaults without GitHub writes.
+Change existing repositories only when their settings are in scope.
+
 ## Configure selected automation
 
 - Verify supported stable tool versions and APIs against official documentation.

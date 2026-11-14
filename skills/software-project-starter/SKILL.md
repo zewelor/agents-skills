@@ -1,6 +1,6 @@
 ---
 name: software-project-starter
-description: Design and bootstrap minimal software projects across languages. Use for new-project kickoff or early MVP planning, not routine changes in established codebases.
+description: Design and bootstrap minimal software projects across languages. Use for new-project kickoff, new GitHub repository setup, or early MVP planning; skip routine changes in established codebases.
 ---
 
 # Software Project Starter
@@ -25,7 +25,8 @@ these defaults; reuse decisions and authorization already established.
 Before implementation, select project-local skills using the stack guidance and
 [installation workflow](references/automation.md#select-repository-local-skills).
 
-- [Automation](references/automation.md): read for every new-project bootstrap.
+- [Automation](references/automation.md): read for every new-project bootstrap
+  or new GitHub repository setup.
   Include GitHub Actions CI by default unless explicitly excluded; ask about
   Renovate and Docker only when those choices are undecided.
 - [Testing](references/testing.md): briefly assess PBT, stateful testing, and
