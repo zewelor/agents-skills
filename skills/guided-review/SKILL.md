@@ -133,6 +133,10 @@ validation, then the comprehension check. For an automatically prepared package,
 report remaining candidate packages or why the scope was kept whole. Keep the summary
 short enough for the user to inspect the actual diff themselves.
 
+Include a concise draft commit message based only on the staged diff in each
+prepared package summary, before requesting answers or commit approval.
+Follow repository commit conventions and refresh it when the package changes.
+
 Call a package “minimal” only when it is the smallest safe and understandable unit, not
 when it merely contains the fewest files. Avoid splitting a behavior change from its
 required test or contract documentation.
@@ -200,6 +204,13 @@ or risk acceptance decision on their behalf.
 - Run the narrowest relevant syntax checks, tests, linters, render checks, or check-mode
   probes required by the repository instructions and the package’s risk.
 - Prefer repository-provided runners and project-local tools.
+- Validate prepared packages against the staged snapshot.
+- For a prepared package, if a Git pre-commit hook or required check fails and unrelated
+  unstaged or untracked changes may be involved, rerun the failed checks in a separate
+  checkout of the staged snapshot, following the repository's validation policy. If they
+  pass, report the likely isolation problem and suggest fixing the hook or runner to
+  the user; otherwise diagnose the failure. Edit hooks or runners only when explicitly
+  requested.
 - Never apply a production or remote configuration merely to validate a package.
 - Report exact commands and outcomes. Distinguish passed local checks from checks that
   remain synthetic, unavailable, or pending a real deployment.
@@ -276,10 +287,10 @@ when all of these conditions hold:
 - the user’s understanding is sufficient;
 - `git diff --cached --check` passes.
 
-Before committing, derive a concise message from the staged package only. Commit only
-the index contents. Show the resulting commit and worktree status, never push implicitly,
-then automatically select and prepare the next package in the same turn when `next` was
-requested.
+Before committing, check the displayed draft against the staged diff and apply any
+user-requested wording changes. Commit only the index contents using that message.
+Show the resulting commit and worktree status, never push implicitly, then automatically
+select and prepare the next package in the same turn when `next` was requested.
 
 If the user asks to change the implementation after the review, update the package
 explicitly, restage only its intended scope, and rerun the review and comprehension
