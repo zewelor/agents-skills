@@ -41,6 +41,18 @@ Match the work to the requested scope:
 - For Compose runtime configuration, apply relevant network and orchestration
   settings to the affected services. Preserve the image build unless the
   requested change requires it.
+  After completing the Compose changes, render the effective model using the
+  applicable files, environment, and profiles. Inspect affected services and
+  inherited settings; compare before and after only for refactors intended to
+  preserve behavior. Redact resolved secrets from diagnostic output and reports.
+  Verify `!reset` in the rendered model, especially with YAML anchors or `extends`;
+  do not infer its effect from source.
+  Reuse shared settings only when their effective values and purposes match;
+  preserve service-specific isolation and list-merge semantics.
+  Verify required runtime guarantees that rendering cannot prove, such as startup
+  or no-build behavior, in an isolated project. Exercise failure cases only when
+  needed to prove the guarantee. Do not build images solely for verification or
+  modify live services.
 - For Dockerfile or image-build work, follow the image workflow below and
   consult the relevant build sections.
 
