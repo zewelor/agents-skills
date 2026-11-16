@@ -94,9 +94,9 @@ follow the [official Docker guide](https://docs.astral.sh/uv/guides/integration/
 1. Identify the project language/runtime (Go, Node, Python, Ruby, or other). Pick the matching `deps` pattern below.
 2. Pick the smallest viable runtime using [Minimal Non-Root Runtimes](#minimal-non-root-runtimes). Start truly static binaries with `scratch` and required runtime data; expand only for demonstrated needs.
 3. Choose variable lifetime: use `ARG` for build-only versions, source revisions, toolchain paths, and compiler flags (including across later `RUN` instructions in the same stage); use `ENV` for values intentionally kept in the image or the build-stage environment, such as `PATH`. Re-declare global `ARG` after `FROM` when needed. Pass credentials through BuildKit secret or SSH mounts, never `ARG` or `ENV`. For automatic platform arguments, follow [Cross-Platform Builds](#cross-platform-builds).
-4. Apply layer-cache hygiene: copy lockfiles before source, set `BUNDLE_PATH` outside the app dir for Ruby, use `--mount=type=cache` only when there are external dependencies.
+4. Apply layer-cache hygiene: copy dependency manifests and lockfiles before source; set `BUNDLE_PATH` outside the app dir for Ruby. Add cache mounts when repeated downloads or compilation justify them.
 5. If Compose is in scope, apply compatible runtime hardening from the orchestration section and select `build.target` when needed.
-6. Apply per-stage cleanup in the same RUN: `apt-get clean && rm -rf /var/lib/apt/lists/*`; `npm cache clean --force`; `rm -rf /usr/share/doc /usr/share/man` before the runtime stage.
+6. Clean non-mounted package caches in the install RUN and remove unneeded docs/man pages before the runtime stage. Preserve cache-mounted directories; follow [Build Cache Mounts](#build-cache-mounts-buildkit) for cached installs.
 
 Check checksum and shell-utility flags in the actual build stage: Alpine's
 BusyBox tools do not necessarily accept GNU long options (for example, use
@@ -155,9 +155,25 @@ Adjust per project (e.g., add `target/` for Rust, `dist/` for Node, `vendor/bund
 
 ## Build Cache Mounts (BuildKit)
 
-For compiled languages with heavy dependency graphs (Go, Rust, C/C++), use `--mount=type=cache` to persist the package registry and build artifact cache between Docker builds. Layer cache is empty on a fresh build context, so cache mounts help only when source changes trigger rebuilds of the same module graph.
+Use cache mounts for expensive repeated downloads or compilation. Ordinary layer
+cache skips a `RUN`; mounts reuse work when that instruction executes again.
+Skip mount setup for fast steps where rebuild savings do not justify it.
 
-Skip cache mounts when there are no external dependencies or the build runs in seconds. Separate `COPY` of lockfiles before source already gives correct layer invalidation; the explicit `--mount=...` flags add noise without measurable speedup.
+- Keep builds correct with empty or evicted caches; write required artifacts
+  outside cache mounts.
+- For APT, keep update and install in one `RUN`; use `sharing=locked` on
+  `/var/cache/apt` and `/var/lib/apt/lists`. For cached installs, remove hooks
+  such as `docker-clean` that would clear the cache; do not clean the mounted
+  directories.
+- Inspect inherited `DEBIAN_FRONTEND` before adding it. When needed, scope
+  `noninteractive` to the install command; `apt-get -y` handles APT confirmation,
+  not debconf questions.
+- Compare actual cold/warm executions before claiming speedups. Invalidate the
+  target `RUN` with a changed input or `ARG`; `--no-cache` also resets cache
+  mounts. Check CI persistence separately: `type=gha` does not preserve them.
+
+For package-manager options and cache lifetime, consult [Docker cache guidance](https://docs.docker.com/build/cache/optimize/#use-cache-mounts).
+For GitHub Actions cache behavior, consult [cache mount persistence](https://docs.docker.com/build/ci/github-actions/cache/#cache-mounts).
 
 ```dockerfile
 # Go: $GOMODCACHE and $GOCACHE
