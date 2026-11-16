@@ -129,13 +129,30 @@ reporting it as ready. Do not stage unrelated changes merely to avoid asking the
    - any ambiguity or assumption used to select the package.
 
 Report the selected scope in a stable order: boundary, review agenda, findings,
-validation, then the comprehension check. For an automatically prepared package, also
-report remaining candidate packages or why the scope was kept whole. Keep the summary
-short enough for the user to inspect the actual diff themselves.
+validation, the draft commit message for a prepared package, then the comprehension
+check. For an automatically prepared package, also report remaining candidate
+packages or why the scope was kept whole. Keep the summary short enough for the
+user to inspect the actual diff themselves.
 
-Include a concise draft commit message based only on the staged diff in each
-prepared package summary, before requesting answers or commit approval.
-Follow repository commit conventions and refresh it when the package changes.
+Include a draft commit message in each prepared package summary, before requesting
+answers or commit approval. Give it a concise subject and a short body preserving
+why the decision was made so a future reader can reconstruct the reasoning. Omit
+the body only when the user explicitly requests or approves doing so. Ground the
+description of the change in the staged diff and the rationale in established
+review context relevant to the current package. Start the body with the established
+reason for the decision, then explain how this package addresses it. Include what
+prompted the change and which established facts led to the decision; do not
+substitute a description of the diff or a generic benefit for the actual reason.
+When a body is required and the motivation is unclear, ask the user to clarify it
+before finalizing the draft; never invent missing motivation. Follow repository
+commit conventions and refresh the draft when the package changes. For example:
+
+```text
+refactor(nvim): use built-in EditorConfig
+
+Neovim already applies EditorConfig rules by default, so the plugin
+is redundant. Remove it to avoid maintaining the extra dependency.
+```
 
 Call a package “minimal” only when it is the smallest safe and understandable unit, not
 when it merely contains the fewest files. Avoid splitting a behavior change from its
@@ -287,8 +304,9 @@ when all of these conditions hold:
 - the user’s understanding is sufficient;
 - `git diff --cached --check` passes.
 
-Before committing, check the displayed draft against the staged diff and apply any
-user-requested wording changes. Commit only the index contents using that message.
+Before committing, finalize the displayed draft using the commit-message rules
+above, check it against the staged diff, and apply any user-requested wording
+changes. Commit only the index contents using that message.
 Show the resulting commit and worktree status, never push implicitly, then automatically
 select and prepare the next package in the same turn when `next` was requested.
 

@@ -2,3 +2,6 @@ interface:
   display_name: "Guided Review"
   short_description: "Guide reviews, understanding, and second opinions"
   default_prompt: "Use $guided-review to review a change and check my understanding of its practical consequences before approval."
+
+policy:
+  allow_implicit_invocation: false
