@@ -1,0 +1,7 @@
+interface:
+  display_name: "Force Delegate"
+  short_description: "Delegate execution; supervise and validate results"
+  default_prompt: "Use $force-delegate to delegate this task to the configured agents while supervising, integrating, and validating their results."
+
+policy:
+  allow_implicit_invocation: false
