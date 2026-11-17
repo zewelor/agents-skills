@@ -13,8 +13,6 @@ worktree changes. Keep the user in control of the review and publication decisio
 
 - Treat the user-selected scope as the review boundary. Use the staged diff as the
   boundary for a prepared package.
-- Decide automatically whether the selected work can be split into independently valid
-  packages. Do not ask the user to choose a splitting mode.
 - Stage only selected paths or hunks when preparing packages; never use `git add .` or an
   equivalent broad add. Stage the whole relevant scope when no safe split exists.
 - Preserve unrelated staged, unstaged, and untracked work.
@@ -26,17 +24,10 @@ worktree changes. Keep the user in control of the review and publication decisio
 - Never push as part of this workflow unless the user separately requests it.
 
 Call each independently reviewable change package a **chunk** (spójna paczka zmian).
-Choose automatically whether the current scope is one chunk or a sequence of chunks;
-never ask the user to choose a chunking mode.
 
 Do not silently unstage, discard, reset, overwrite, or reformat unrelated work. Treat an
 existing staged diff as a candidate user boundary, not as automatically commit-ready.
-Adopt it only when it matches the requested task and contains one coherent package. If it
-mixes relevant and unrelated changes, keep Git state unchanged, block the commit path,
-and ask only for authorization to rebuild the index. After authorization, choose the
-package boundary automatically; do not ask the user how to split it. Stop and ask when
-the relevant scope itself cannot be identified safely or when completing the task would
-require rewriting an existing staged boundary.
+Follow the scope-selection rules below before adopting or changing that boundary.
 
 Track the review mode explicitly: `full_scope` is read-only, while `prepared_package` is
 the only mode that can pass the commit gate. Do not infer one mode from the other.
@@ -54,8 +45,7 @@ Interpret these commands and their natural-language equivalents as follows:
 
 Accept clear natural-language equivalents, including “zrób review tej zmiany”,
 “przygotuj następną paczkę”, “zrób self-review”, and “tak, commituj i zacznij nową
-paczkę”. Do not interpret a reply as commit approval. Do not ask the
-user whether the work should be split; make that determination from the changes.
+paczkę”. Do not interpret an answer alone as commit approval.
 
 ## Select a review scope
 
@@ -80,6 +70,8 @@ changes, follow the automatic package selection procedure below, make the staged
 the review boundary, and set the review mode to `prepared_package`.
 
 ## Automatically select a package
+
+Choose the split automatically; do not ask the user to choose a chunking mode.
 
 1. Map changed files and hunks to their intent, dependency, ordering, tests, fixtures,
    and contract documentation.
@@ -109,19 +101,16 @@ reporting it as ready. Do not stage unrelated changes merely to avoid asking the
    - `git diff --cached --name-status`
    - `git diff --name-status`
    - relevant untracked paths
-3. If a staged diff already exists, check whether it matches the requested task and is
-   one coherent intent. Adopt it as the current package only when both checks pass. Do
-   not add other changes to it. If it is mixed, remain read-only and request authorization
-   to rebuild the index; do not ask the user to choose the resulting package boundary.
-4. If no staged diff exists, apply the automatic package-selection procedure above.
-5. If the user proposes a package boundary, evaluate it as a constraint, but keep
+3. Follow “Select a review scope” for an existing staged diff. If no staged diff exists,
+   apply the automatic package-selection procedure above.
+4. If the user proposes a package boundary, evaluate it as a constraint, but keep
    responsibility for checking completeness and dependencies.
-6. Stage only the selected files or hunks. Use explicit paths, interactive staging, or a
+5. Stage only the selected files or hunks. Use explicit paths, interactive staging, or a
    narrowly generated index patch. Recheck `git status --short`, the staged name list,
    and the staged diff. Set the review mode to `prepared_package` only after confirming
    that the index contains exactly one coherent selected package and no known unrelated
    changes.
-7. Show the user:
+6. Show the user:
    - the package purpose and boundary;
    - the staged files/hunks;
    - remaining candidate packages or the reason the scope was kept whole;
@@ -135,17 +124,23 @@ packages or why the scope was kept whole. Keep the summary short enough for the
 user to inspect the actual diff themselves.
 
 Include a draft commit message in each prepared package summary, before requesting
-answers or commit approval. Give it a concise subject and a short body preserving
-why the decision was made so a future reader can reconstruct the reasoning. Omit
-the body only when the user explicitly requests or approves doing so. Ground the
-description of the change in the staged diff and the rationale in established
-review context relevant to the current package. Start the body with the established
-reason for the decision, then explain how this package addresses it. Include what
-prompted the change and which established facts led to the decision; do not
-substitute a description of the diff or a generic benefit for the actual reason.
-When a body is required and the motivation is unclear, ask the user to clarify it
-before finalizing the draft; never invent missing motivation. Follow repository
-commit conventions and refresh the draft when the package changes. For example:
+answers or commit approval. Give substantive changes a concise subject and a short
+body documenting the problem or trigger, why this approach was chosen, and any established
+tradeoffs, so a future reader can reconstruct the decision. Start with the established
+reason, then explain how the package addresses it; do not substitute a diff summary
+or generic benefit for the motivation.
+
+Use a subject alone for an obvious typo or mechanical formatting correction with no
+change in behavior, meaning, or contract and no non-obvious decision to explain.
+Respect an explicit user request about the body. Judge significance by consequences,
+not line count: a one-line policy or behavior change can still require the rationale.
+
+Ground the change in the staged diff and its motivation in established user,
+repository, or review context. Reuse that rationale without asking the user to
+reconfirm it. When a required rationale remains unclear after inspecting available
+context, ask a focused question before finalizing the draft; never invent the reason.
+Follow repository commit conventions and refresh the draft when the package changes.
+For example:
 
 ```text
 refactor(nvim): use built-in EditorConfig
@@ -216,26 +211,42 @@ or risk acceptance decision on their behalf.
 
 ## Validate proportionally
 
-- Run `git diff --cached --check` for an automatically prepared package, or the
-  equivalent check for the selected full-scope diff, before declaring the review complete.
-- Run the narrowest relevant syntax checks, tests, linters, render checks, or check-mode
-  probes required by the repository instructions and the package’s risk.
-- Prefer repository-provided runners and project-local tools.
-- Validate prepared packages against the staged snapshot.
-- For a prepared package, if a Git pre-commit hook or required check fails and unrelated
-  unstaged or untracked changes may be involved, rerun the failed checks in a separate
-  checkout of the staged snapshot, following the repository's validation policy. If they
-  pass, report the likely isolation problem and suggest fixing the hook or runner to
-  the user; otherwise diagnose the failure. Edit hooks or runners only when explicitly
-  requested.
-- Never apply a production or remote configuration merely to validate a package.
-- Report exact commands and outcomes. Distinguish passed local checks from checks that
-  remain synthetic, unavailable, or pending a real deployment.
-- After the final package validation, record a fingerprint of the exact staged content,
-  for example `git diff --cached --binary | sha256sum`, and show it with the validation
-  result. If the staged diff changes after review or validation, mark the prior review
-  stale and repeat the affected review, comprehension check, and validation before
-  allowing `next`.
+- Run `git --no-pager diff --cached --check` for a prepared package, or the equivalent
+  check for a full-scope review. Honor repository-required checks and hooks.
+- Select the smallest checks covering the changed behavior, plausible failures, and
+  affected callers or shared contracts. Select existing tests by relevance, including
+  tests unchanged by the package; do not limit selection to staged test files. Prefer
+  repository runners and local tools. Use syntax/reference checks for documentation;
+  do not invent tests that assert source text or merely detect staging.
+  Expand by impact from the changed behavior; an unchanged import alone does not
+  justify testing a dependency or sibling feature.
+- Run a full suite only when the repository requires it or a concrete unresolved risk
+  cannot be checked more narrowly. Staging, another package, `next`, or a new reviewer
+  alone does not justify a full-suite run.
+- Before running tests, check prior passing results. If the relevant code, tests,
+  fixtures, dependencies, and environment match the index, count those checks as
+  validated; do not rerun them merely because files were staged. After a change, rerun
+  only affected checks and explain any broader run. Pass evidence to a requested
+  reviewer without prescribing their findings.
+- Establish evidence for the package's index contents: a matching worktree result is
+  sufficient. If excluded worktree changes affected the checked inputs, validate the
+  affected behavior in an isolated staged snapshot instead. Treat missing staged
+  prerequisites as a package gap, even when the complete worktree passes.
+- If a required check or pre-commit hook fails and unrelated work may be involved,
+  rerun the failed check in an isolated staged snapshot under repository policy.
+  If it passes, report the likely isolation problem and suggest a separate hook/runner
+  fix; otherwise diagnose the failure. Change hooks or runners only when requested.
+- Never apply production or remote configuration merely to validate a package.
+- Report commands, outcomes, checked state, reused results and why they apply, and
+  remaining gaps. Distinguish local, synthetic, unavailable, and deployment evidence.
+
+For a prepared package, record and show the base commit (or unborn branch for an
+initial commit) and full index tree after final validation as the staged fingerprint.
+Use `git --no-pager rev-parse --verify HEAD` for an existing base and
+`git --no-pager write-tree` for the tree. A diff hash alone does not identify the
+complete staged snapshot. If the base or tree changes, review the delta and renew
+affected validation and comprehension evidence before allowing `next`; retain
+evidence for unaffected checks.
 
 ## Check practical understanding
 
@@ -289,9 +300,8 @@ when all of these conditions hold:
 - the review mode is explicitly `prepared_package`;
 - the index contains exactly one coherent selected package and no known unrelated changes;
 - the current staged diff is the one that was reviewed and validated;
-- a staged fingerprint was recorded in the current review session after final validation;
-- the current staged fingerprint matches that recorded value (recompute it immediately
-  before committing);
+- the base (including unborn state) and full index tree match the fingerprint recorded after final
+  validation in this review session (recompute both immediately before committing);
 - the current conversation contains a review for that exact staged diff and sufficient
   comprehension evidence under the check above; report the understanding result
   in the same turn before or alongside the commit outcome;
@@ -301,7 +311,6 @@ when all of these conditions hold:
   materials or unrelated blanket authorization;
 - no unresolved `BLOCKER` finding remains, or the user explicitly acknowledges and
   rejects that finding;
-- the user’s understanding is sufficient;
 - `git diff --cached --check` passes.
 
 Before committing, finalize the displayed draft using the commit-message rules
