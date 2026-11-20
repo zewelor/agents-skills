@@ -75,14 +75,14 @@ npx skills add zewelor/agents-skills --skill software-engineering
 
 Consider the following language-independent candidates from [mattpocock/skills](https://github.com/mattpocock/skills#engineering).
 
-- `improve-codebase-architecture` for reviewing an existing codebase for refactoring opportunities.
+- `improve-codebase-architecture` for reviewing existing code for refactoring opportunities. Requires `codebase-design`, `domain-modeling`, and `grilling`.
 - `codebase-design` for designing module interfaces and improving testability.
 - `domain-modeling` for clarifying domain concepts and terminology.
 
-Check prerequisites and keep only the `--skill` flags for selected candidates.
+Reuse skills already available to the target agent, including global copies. Keep flags for missing selected skills and their required companions.
 
 ```sh
-npx skills@latest add mattpocock/skills --skill=improve-codebase-architecture --skill=codebase-design --skill=domain-modeling
+npx skills@latest add mattpocock/skills --skill=improve-codebase-architecture --skill=codebase-design --skill=domain-modeling --skill=grilling
 ```
 
 Install selected skills with `npx skills add <source> --skill <name>` and the chosen

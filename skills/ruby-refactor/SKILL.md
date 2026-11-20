@@ -28,6 +28,29 @@ Keep established project conventions unless the requested change requires an
 update. Reuse decisions and authorization already present in the conversation;
 ask only about unresolved choices that materially affect the result.
 
+## Hash access contracts
+
+- Use `fetch(key)` for required keys in structured data, such as API responses,
+  configuration and serialized job state. Let a missing key raise `KeyError`.
+- For a schema field whose absence intentionally means `nil`, prefer
+  `fetch(key, nil)` to make that choice explicit. Ordinary optional lookups may
+  use `[]` or `dig`; do not use them to hide missing required data. Explain the
+  meaning of `nil` in the owning contract or a short comment when it is unclear.
+- `fetch` checks key presence, not value validity: a present `nil` or `false`
+  remains unchanged. Validate values at the owning boundary only when the
+  contract forbids them; reuse existing validation.
+- Express defaults with `fetch(key, default)` rather than `||` when `nil` or
+  `false` is meaningful. Use a block for an expensive or side-effecting default.
+
+```ruby
+data.fetch("id")             # Required key; missing is an error.
+data.fetch("archived_at")    # Required key; nil means not archived.
+data.fetch("next_page", nil) # Optional key; absent means no next page.
+```
+
+See the [Ruby Style Guide](https://rubystyle.guide/#hash-fetch) and
+[Hash#fetch documentation](https://docs.ruby-lang.org/en/4.0/Hash.html#method-i-fetch).
+
 ## Reference categories
 
 Use the categories below for navigation, not as a severity or implementation
