@@ -250,14 +250,23 @@ evidence for unaffected checks.
 
 ## Check practical understanding
 
-Explain the material before/after consequences. Check whether the user can predict
-how the change affects use, configuration, compatibility, or failure handling.
-Use “package” for a prepared package and “scope” for a full review.
+Use `$explain` only to present the material before/after consequences in the
+review summary. If `$explain` cannot be loaded, write the explanation in plain
+technical language inspired by ASD-STE100. Use short sentences, consistent terms,
+and explicit causes and consequences. Then follow the comprehension check below.
+
+For a non-obvious change, show one concrete scenario that explains what happened
+before, why the change affects that path, and what the caller observes after.
+Check whether the user can predict how the change affects use, configuration,
+compatibility, or failure handling. Use “package” for a prepared package and
+“scope” for a full review.
 
 Ask only about material gaps not already resolved by the conversation. Use concrete
-scenarios and accept brief answers. Do not set a question quota or quiz unchanged
-rules, implementation trivia, or the agent's package choices unless they have
-material consequences. Rephrase unclear questions before assessing the answer.
+scenarios and accept brief answers. If the explanation already gives the answer,
+check whether the user can apply it in a different scenario. Do not set a question
+quota or quiz unchanged rules, implementation trivia, or the agent's package choices
+unless they have material consequences. Rephrase unclear questions before assessing
+the answer.
 
 When earlier replies demonstrate understanding of the reviewed change, cite that
 evidence instead of asking again. This completes the comprehension check, not
@@ -361,7 +370,9 @@ making both opinions stale.
 
 ## Explain without editing
 
-For `$guided-review explain`, focus on the selected file, hunk, condition, or reported
-finding. Use a small example, state transition, before/after comparison, or
-counterexample. Keep the explanation tied to the current selected scope. Do not edit,
-restage, commit, or reinterpret the user’s answer as approval.
+For `$guided-review explain` and natural follow-ups such as “why?”, use `$explain`
+and the same fallback as in the [review summary](#check-practical-understanding).
+Explain the point the user asked about within the current selected scope. Resume
+the understanding check only if it was already in progress and incomplete
+when the user asked. Otherwise, stop after the explanation. Do not edit, restage,
+commit, or reinterpret the user’s answer as approval.
