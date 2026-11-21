@@ -250,8 +250,8 @@ evidence for unaffected checks.
 
 ## Check practical understanding
 
-Use `$explain` only to present the material before/after consequences in the
-review summary. If `$explain` cannot be loaded, write the explanation in plain
+In the review summary, use `$explain` to present the material before/after
+consequences. If `$explain` cannot be loaded, write the explanation in plain
 technical language inspired by ASD-STE100. Use short sentences, consistent terms,
 and explicit causes and consequences. Then follow the comprehension check below.
 
