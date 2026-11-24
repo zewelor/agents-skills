@@ -71,26 +71,25 @@ the review boundary, and set the review mode to `prepared_package`.
 
 ## Automatically select a package
 
-Choose the split automatically; do not ask the user to choose a chunking mode.
+Choose package boundaries automatically.
 
 1. Map changed files and hunks to their intent, dependency, ordering, tests, fixtures,
    and contract documentation.
-2. Form candidate packages that could each be reviewed, validated, and understood on
-   their own. Keep code with the tests and documentation required to make its behavior
-   complete.
+2. Group changes that serve one purpose and can be reviewed and validated as one
+   decision. Keep code with the tests and documentation required to make its
+   behavior complete.
 3. Build a dependency order between candidates. Treat a candidate as ready only when
    its prerequisites are already in the base revision or included in that same package.
-4. Reject a split when a candidate would leave an invalid intermediate state, lose a
-   required test or contract, or require another package to explain its behavior.
-5. If two or more ready candidates remain, choose the smallest coherent next package,
-   stage it, and report the remaining candidate packages without staging them.
-6. If no safe split remains, stage all relevant changes as one package and explain why.
-7. If the split or dependency order is uncertain, prefer one complete package over an
-   artificial sequence.
+4. Split when a concrete difference in purpose, effect, or risk warrants a
+   separate review decision. Reject splits that leave an invalid intermediate
+   state, omit a required test or contract, or require another package to explain
+   the change.
+5. Stage the next ready package and report the remaining candidates without
+   staging them. If no safe split is clear, stage the complete relevant change
+   as one package and explain why.
 
-Do not split only by file count or line count. Use semantic independence, topological
-ordering, and a complete validation boundary. Validate the selected candidate before
-reporting it as ready. Do not stage unrelated changes merely to avoid asking the user.
+Validate the selected package before reporting it as ready. Keep unrelated
+changes outside the package.
 
 ## Prepare the selected package
 
@@ -148,10 +147,6 @@ refactor(nvim): use built-in EditorConfig
 Neovim already applies EditorConfig rules by default, so the plugin
 is redundant. Remove it to avoid maintaining the extra dependency.
 ```
-
-Call a package “minimal” only when it is the smallest safe and understandable unit, not
-when it merely contains the fewest files. Avoid splitting a behavior change from its
-required test or contract documentation.
 
 ## Review an existing scope
 
