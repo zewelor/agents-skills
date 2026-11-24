@@ -2,7 +2,7 @@
 
 - [Non-root users](#non-root-user-creation-when-distroless-is-not-viable)
 - [Ruby and Bundler](#ruby--bundler)
-- [Debian versions](#debian-version-alignment)
+- [Base image parity and version alignment](#base-image-parity-and-version-alignment)
 
 Minimize production runtime contents. Use this preference order within the
 application's actual linking/runtime requirements; skip incompatible choices.
@@ -53,9 +53,9 @@ Consult the [DHI runtime guidance](https://docs.docker.com/dhi/how-to/use/) and
 [Distroless image catalog](https://github.com/GoogleContainerTools/distroless)
 for supported variants and their contents.
 
-For projects already using `ghcr.io/zewelor/ruby`, consider its `-distroless`
-variant and match the build image's Debian release. Preserve a project's
-compatible maintained image provider unless a change is justified.
+In a multi-stage build, use the paths configured by the project and base image
+for application files and installed dependencies. Check that the final stage
+can find them and that development bind mounts leave required files accessible.
 
 Default the image to its nonroot user (UID 65532 for Google Distroless `nonroot`)
 or an explicit numeric UID/GID. Keep application code and dependencies
@@ -72,48 +72,28 @@ application executable without a shell. Omit checks that do not fit the workload
 
 ## Non-Root User Creation (when distroless is not viable)
 
-Use the base image's suitable nonroot user when available. Otherwise declare a
-numeric UID/GID; create passwd/group entries only when the application needs
-user lookup or a home directory. Use the distribution's user-creation tools in
-the build stage when available, keeping them out of a minimal runtime.
-
-Debian / Ubuntu:
-
-```dockerfile
-RUN groupadd -r -g 1001 app && \
-    useradd -r -u 1001 -g app -d /nonexistent -s /sbin/nologin app
-USER 1001:1001
-```
-
-Alpine:
-
-```dockerfile
-RUN addgroup -g 1001 -S app && \
-    adduser -S app -u 1001 -G app
-USER 1001:1001
-```
+Use the base image's suitable nonroot user when available. Otherwise set a
+numeric UID/GID in the final stage. If the application looks up account or
+group information by name or numeric ID, verify that lookup in the final image. Entries
+created in an independent build stage stay in that stage. If the application
+needs a home directory, provide it with the permissions it requires.
 
 ## Ruby + Bundler
 
-For projects using `ghcr.io/zewelor/ruby`, use its `-slim` build variant and
-compatible `-distroless` runtime variant. Otherwise use the project's compatible
-maintained Ruby images. Pin the tag to the Ruby version targeted.
+Use the project's Ruby version and lockfile. Install the gem groups needed by
+the target stage. If the runtime needs a specific Bundler version, verify that
+its RubyGems installation and executable are available in the final image.
+For native gems, keep build tools and headers in the build stage and include
+the shared libraries the extensions load at runtime. Verify that the runtime
+user can start the application with its locked gems.
 
-Critical settings:
+## Base Image Parity and Version Alignment
 
-- `BUNDLE_PATH=/bundle` - install gems outside the app dir; volume mounts of source do not overwrite the bundle.
-- `BUNDLE_WITHOUT="development:test"` in the production build stage - skip dev/test groups.
-- `BUNDLE_DEPLOYMENT="1"` in the runtime stage - lock gem versions; bundler must not upgrade at start.
-- `RUBYOPT='--disable-did_you_mean'` in the runtime stage - smaller, faster startup (skips the did_you_mean gem).
-- `bundle install "-j$(nproc)" --retry 3` - parallel install with retries.
-
-Native extensions (e.g., `psych` for YAML, `nokogiri`) require build tools and headers at the `deps` stage but not at runtime. Pass them via a `DEV_PACKAGES` build arg (e.g., `build-essential libyaml-dev`) and exclude them from the runtime base.
-
-In distroless, copy `/bundle` and `/app` from the builder with read/execute
-permissions for UID 65532 and run as `USER nonroot`. Keep code and gems
-root-owned; provide separately writable paths only where the app needs them.
-
-## Debian Version Alignment
+Keep distribution-based `dev`, `test`, and `production` stages on the same OS
+family and libc. Exclude `scratch` from this comparison because it has no
+distribution. If a migration breaks tooling, investigate fixes on the selected
+base. Before introducing a split between distribution-based stages, explain
+why it is needed and obtain the user's approval.
 
 For dynamically linked binaries and native extensions, verify target
 architecture, libc (glibc versus musl), loader, and library ABI compatibility.
@@ -121,6 +101,6 @@ Prefer matching Debian releases for Debian build/runtime stages to reduce ABI
 mismatches; verify required libraries rather than assuming the suite alone
 is sufficient. Select explicit supported suite/version tags and pin digests.
 
-Do not require matching distributions for a truly static binary without external
-ABI dependencies. An Alpine Go builder with `CGO_ENABLED=0` can target scratch
+A build-only compiler stage can use a different distribution from the runtime
+when its binary is truly static and has no external ABI dependencies. An Alpine Go builder with `CGO_ENABLED=0` can target scratch
 or a compatible static runtime; validate the resulting artifact and image.

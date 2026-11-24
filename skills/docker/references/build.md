@@ -5,19 +5,19 @@
 - [Build cache mounts](#build-cache-mounts-buildkit)
 - [Cross-platform builds](#cross-platform-builds)
 
-Prefer publisher-maintained GHCR images over Docker Hub when the required
-version and target platforms are available; otherwise keep the current provider.
+Keep the existing maintained image provider when it meets project requirements.
+When choosing a new source or migrating registries, prefer publisher-maintained
+GHCR images over Docker Hub if they support the required version and platforms.
 Verify the registry in official publisher documentation, avoid unofficial
 mirrors, and pin the version and verified digest. When migrating registries,
 preserve the version and update matching Renovate or Dependabot package rules.
 
-For uv, copy `/uv` and `/uvx` from `ghcr.io/astral-sh/uv` into the build stage;
-follow the [official Docker guide](https://docs.astral.sh/uv/guides/integration/docker/).
+For projects that use uv, consult the [official Docker guide](https://docs.astral.sh/uv/guides/integration/docker/).
 
-1. Identify the project language/runtime (Go, Node, Python, Ruby, or other). Pick the matching `deps` pattern below.
+1. Identify the project's package manager and existing dependency-install command.
 2. Pick the smallest viable runtime using [Minimal Non-Root Runtimes](image-runtime.md). Start truly static binaries with `scratch` and required runtime data; expand only for demonstrated needs.
 3. Choose variable lifetime: use `ARG` for build-only versions, source revisions, toolchain paths, and compiler flags (including across later `RUN` instructions in the same stage); use `ENV` for values intentionally kept in the image or the build-stage environment, such as `PATH`. Re-declare global `ARG` after `FROM` when needed. Pass credentials through BuildKit secret or SSH mounts, never `ARG` or `ENV`. For automatic platform arguments, follow [Cross-Platform Builds](#cross-platform-builds).
-4. Apply layer-cache hygiene: copy dependency manifests and lockfiles before source; set `BUNDLE_PATH` outside the app dir for Ruby. Add cache mounts when repeated downloads or compilation justify them.
+4. Separate dependency installation from frequently changing source when the installer can run independently. Add cache mounts when repeated downloads or compilation justify them.
 5. If Compose is in scope, apply compatible runtime hardening from [Orchestration Security Hardening](runtime.md#orchestration-security-hardening) and select `build.target` when needed.
 6. Clean non-mounted package caches in the install RUN and remove unneeded docs/man pages before the runtime stage. Preserve cache-mounted directories; follow [Build Cache Mounts](#build-cache-mounts-buildkit) for cached installs.
 
@@ -36,45 +36,44 @@ needed; create only stages the project uses.
 Select relevant stages from this lifecycle:
 
 - `base` - runtime/SDK environment with host platform variables.
-- `deps` - resolve packages before copying source, to leverage layer caching.
-  - Go: `COPY go.mod ./` + `RUN go mod download`
-  - Node.js: `COPY package.json package-lock.json ./` + `RUN npm ci`
-  - Python: `COPY requirements.txt ./` + `RUN pip install -r requirements.txt`
-  - Ruby: `COPY Gemfile Gemfile.lock ./` + `RUN bundle install -j$(nproc) --retry 3` (with `BUNDLE_PATH=/bundle` set in the base stage)
-- `validate` - tests, linters, type-checks in an isolated layer.
+- `deps` - copy the manifests, lockfiles and other inputs the project's install
+  command reads, including workspace manifests or local packages when required.
+  Run that command before copying the remaining source.
+- `validate` - run tests, linters, and type checks from the checkout when the
+  project toolchain supports them. Use a validation stage when checks need its
+  environment or the project uses it to keep local and CI checks reproducible.
+  If required checks run in a separate stage, verify that the project’s test
+  command builds that target.
+  Verify image-specific behavior in the final image.
 - `build` - compile, bundle, or minify (`go build`, `npm run build`, `cargo build`).
 - `runtime` - clean stage with only production artifacts copied from `build`.
 
-Source changes invalidate only downstream stages; downloaded modules stay cached. Avoid copying volatile source code (`/src`, `/app/src`, general code files) before or during `deps`.
-
 ## Build Context Hygiene (.dockerignore)
 
-A missing or thin `.dockerignore` sends the entire repo to the Docker daemon on every build. Three separate problems:
+Inspect the context used by each Dockerfile. Keep the inputs its stages read
+through `COPY`, `ADD`, or build-time bind mounts, including files read by
+packaging tools (for example, a README used for package metadata).
 
-- Build time: multi-GB context over network for every `docker build`.
-- Secret leakage: `.env`, `*.pem`, `id_rsa` get baked into image layers, visible in `docker history` even after `rm`.
-- Cache invalidation: changes to files used by `COPY`/`ADD` can invalidate downstream layers; changes to `mtime` alone do not.
+Exclude local credentials and private keys. Supply required build credentials
+through secret or SSH mounts. Exclude unrelated host artifacts, caches and logs
+to limit context transfers and avoid invalidating layers that copy directories.
+Check exclusions against the build inputs before applying broad patterns.
 
-Minimum `.dockerignore` for most projects:
+Use the project's context preview when available. Otherwise, list the files and
+symlinks visible to `COPY .` after applying the root `.dockerignore` with the
+skill's [preview script](../scripts/check-dockerignore.sh) (Bash and Python 3).
+Use a builder trusted with the context: it receives and can cache any files
+the ignore rules miss. The script prints one path per line using JSON escaping for special characters.
+Pass the absolute path to the build context directory:
 
-```
-.git
-.gitignore
-.env*
-*.pem
-*.key
-node_modules
-__pycache__
-*.pyc
-.vscode
-.idea
-*.log
-Dockerfile
-README.md
-docker-compose*.yml
+```sh
+/path/to/skill/scripts/check-dockerignore.sh /path/to/project
 ```
 
-Adjust per project (e.g., add `target/` for Rust, `dist/` for Node, `vendor/bundle` for Ruby). The principle: exclude anything not explicitly `COPY`'d.
+Keep assertions about required or forbidden paths in the project's own tests.
+For Dockerfile-specific ignore rules, validate with the matching Dockerfile.
+To verify the published filesystem, export the actual release target and check
+its required and forbidden paths.
 
 ## Build Cache Mounts (BuildKit)
 
@@ -102,7 +101,7 @@ For GitHub Actions cache behavior, consult [cache mount persistence](https://doc
 # Go: $GOMODCACHE and $GOCACHE
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    go mod download
+    go build -o /out/app ./cmd/app
 
 # Rust: $CARGO_HOME/registry and Cargo target dir
 # Note: Since the cache mount is unmounted after this RUN step, you must copy the compiled binary out of the target folder to another path (e.g., /app/app-binary) within the same RUN step so it is accessible to subsequent stages.

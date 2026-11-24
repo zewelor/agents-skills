@@ -42,7 +42,7 @@ Apply compatible hardening to the affected workload and verify required file
 access and startup behavior. Use the following Compose settings; translate them
 to the orchestrator's equivalent fields for Kubernetes rather than copying Compose keys:
 
-- `read_only: true` - read-only root filesystem; blocks installing malicious packages or altering static assets at runtime.
+- `read_only: true` - make the container root filesystem read-only. Check writable mounts separately.
 - `security_opt: ["no-new-privileges:true"]` - blocks `setuid`/`setgid` privilege escalation.
 - `cap_drop: ["ALL"]` - drops all default kernel capabilities; restricts administrative syscalls.
 - `user` - keep the image's suitable user or choose a verified override through [Runtime users and bind mounts](#runtime-users-and-bind-mounts).
@@ -51,6 +51,6 @@ Defense in depth and reliability:
 
 - Custom networks: connect services only to networks needed for communication; keep a frontend off the DB's network when it needs no direct DB access. Use `internal: true` for external isolation; services sharing that network can still communicate.
 - `deploy.resources.limits.cpus` and `memory` - configure supported limits and verify they are enforced. For rootless Docker, check cgroup v2, the systemd driver, and delegation of the required controllers; `Cgroup Driver: none` means cgroup limits are ignored. Do not treat successful Compose parsing as proof of enforcement.
-- `deploy.restart_policy.condition: on-failure` with `max_attempts: 3` - default resilience against crashes.
+- Match restart policy to the service lifecycle. Enable retries for a one-off job or migration only when repeating it after partial failure is safe and intended.
 - `build.target: <stage>` - select a specific multi-stage target (e.g., `live`, `distroless`, `dev`) per environment instead of building the whole Dockerfile.
-- For runtime secrets, prefer `*_FILE` env vars (e.g., `POSTGRES_PASSWORD_FILE: /run/secrets/db_password`) backed by Docker secrets or Kubernetes `Secret` volumes - never `ENV` literals.
+- Mount runtime secrets and use the file interface the application or image entrypoint supports. Set a variable such as `POSTGRES_PASSWORD_FILE` only when the image reads it. Keep secret values out of Dockerfile `ENV` instructions.

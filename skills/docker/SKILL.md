@@ -45,13 +45,15 @@ Match the work to the requested scope:
   After completing the Compose changes, render the effective model using the
   applicable files, environment, and profiles. Inspect affected services and
   inherited settings; compare before and after only for refactors intended to
-  preserve behavior. Redact resolved secrets from diagnostic output and reports.
+  preserve behavior. Filter the rendered model before printing it so resolved secrets stay out of logs and reports.
   Verify `!reset` in the rendered model, especially with YAML anchors or `extends`;
   do not infer its effect from source.
   Reuse shared settings only when their effective values and purposes match;
   preserve service-specific isolation and list-merge semantics.
   Verify required runtime guarantees that rendering cannot prove, such as startup
-  or no-build behavior, in an isolated project. Exercise failure cases only when
+  or no-build behavior, in an isolated project. Before starting it, check the
+  resolved mounts and published ports. Use disposable storage for writable data
+  and avoid port conflicts with live services. Exercise failure cases only when
   needed to prove the guarantee. Do not build images solely for verification or
   modify live services.
 - For user, bind-mount, Compose isolation or CPU/memory limit changes, follow [runtime guidance](references/runtime.md); verify required resource limits are enforced, not merely accepted in configuration.
