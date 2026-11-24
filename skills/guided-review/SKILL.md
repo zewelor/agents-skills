@@ -1,6 +1,6 @@
 ---
 name: guided-review
-description: Guide an interactive review of Git changes with practical understanding checks and approved commits. Use when explicitly requested or invoked as $guided-review, not for ordinary review.
+description: Guide review of Git changes with optional independent review and explicit human commit approval. Use when explicitly requested or invoked as $guided-review, not for ordinary review.
 ---
 
 # Guided Review
@@ -18,9 +18,9 @@ worktree changes. Keep the user in control of the review and publication decisio
 - Preserve unrelated staged, unstaged, and untracked work.
 - Review only the selected diff plus the minimum relevant repository context.
 - Run focused, repository-approved validation before reporting the selected scope as ready.
-- Check the user’s practical understanding of the change and its consequences after the review.
-- Treat replies as evidence of understanding, not as implicit implementation requests.
-- Wait for explicit approval before committing or publishing.
+- Ask optional questions about material changes to how people use or operate the system.
+- Treat answers as discussion. Require an explicit request to implement changes.
+- Apply the commit gate to each package. Require separate authorization to publish.
 - Never push as part of this workflow unless the user separately requests it.
 
 Call each independently reviewable change package a **chunk** (spójna paczka zmian).
@@ -38,8 +38,9 @@ Interpret these commands and their natural-language equivalents as follows:
 
 | Command | Meaning |
 | --- | --- |
-| `$guided-review` | Detect the relevant change scope, automatically decide whether it can be split, stage the next coherent package when needed, self-review it, validate it, and check practical understanding. Review an explicitly supplied full scope without changing Git state. |
-| `$guided-review next` | Treat this invocation as explicit approval to commit the current reviewed package and automatically prepare the next chunk. Evaluate any accompanying replies. When every gate passes after the review, validation, fingerprint, and comprehension check, commit and prepare the next chunk in the same turn. If it arrives before those materials, run the gates and wait for later approval. Do not push. |
+| `$guided-review` | Detect the relevant change scope, automatically decide whether it can be split, stage the next coherent package when needed, self-review it, validate it, and explain practical consequences. Review an explicitly supplied full scope without changing Git state. |
+| `$guided-review next` | Approve the current package. If the [commit gate](#gate-commits-and-the-next-package) passes, commit it and prepare the next chunk in the same turn. |
+| `$guided-review auto [scope]` | Run [two reviews of one staged package](#review-one-staged-package-in-auto) and report its readiness. |
 | `$guided-review second-opinion` | Run a manually requested independent review using a source selected by the user. |
 | `$guided-review explain` | Explain a selected part of the current scope or produce a concrete scenario/counterexample without changing code. |
 
@@ -51,11 +52,10 @@ paczkę”. Do not interpret an answer alone as commit approval.
 
 1. Prefer an explicit scope from the user: a staged diff, commit range, branch/PR,
    file set, or named package.
-2. If a staged diff exists and the user asks for review without another scope, inspect
-   that diff and do not add worktree changes. Adopt it as a prepared package only when it
-   matches the requested task and contains one coherent intent. If it is mixed or does
-   not match the task, report the mismatch, keep Git state unchanged, block the commit
-   path, and ask whether the user authorizes rebuilding the index.
+2. Before staging anything, inspect the existing index. If it already contains
+   changes, use it as a prepared package only when it matches one complete package
+   in the requested scope (or as the candidate scope when none was given).
+   Otherwise leave it intact and ask before rebuilding it.
 3. If the user explicitly requests a full or read-only review, leave Git state unchanged.
 4. If no staged diff exists and the user asks to review or prepare current worktree
    changes without requesting read-only review, treat all related changes as the
@@ -84,9 +84,8 @@ Choose package boundaries automatically.
    separate review decision. Reject splits that leave an invalid intermediate
    state, omit a required test or contract, or require another package to explain
    the change.
-5. Stage the next ready package and report the remaining candidates without
-   staging them. If no safe split is clear, stage the complete relevant change
-   as one package and explain why.
+5. Stage the next ready package and leave the remaining candidates unstaged.
+   If no safe split is clear, stage the complete relevant change as one package.
 
 Validate the selected package before reporting it as ready. Keep unrelated
 changes outside the package.
@@ -104,26 +103,25 @@ changes outside the package.
    apply the automatic package-selection procedure above.
 4. If the user proposes a package boundary, evaluate it as a constraint, but keep
    responsibility for checking completeness and dependencies.
-5. Stage only the selected files or hunks. Use explicit paths, interactive staging, or a
+5. Use an adopted index as-is. For a new package, stage only the selected files or
+   hunks. Use explicit paths, interactive staging, or a
    narrowly generated index patch. Recheck `git status --short`, the staged name list,
    and the staged diff. Set the review mode to `prepared_package` only after confirming
    that the index contains exactly one coherent selected package and no known unrelated
    changes.
-6. Show the user:
-   - the package purpose and boundary;
-   - the staged files/hunks;
-   - remaining candidate packages or the reason the scope was kept whole;
-   - important related changes deliberately left outside staging;
-   - any ambiguity or assumption used to select the package.
 
-Report the selected scope in a stable order: boundary, review agenda, findings,
-validation, the draft commit message for a prepared package, then the comprehension
-check. For an automatically prepared package, also report remaining candidate
-packages or why the scope was kept whole. Keep the summary short enough for the
-user to inspect the actual diff themselves.
+## Summarize the review
 
-Include a draft commit message in each prepared package summary, before requesting
-answers or commit approval. Give substantive changes a concise subject and a short
+Give one summary after review and validation. State what changes, the exact
+scope, findings, and validation results. Include gaps or assumptions that
+affect approval. Keep routine summaries brief and explain material risks.
+
+For a prepared package, include the staged files or hunks, the staged fingerprint,
+and the draft commit message before asking for approval. For an automatically
+selected package, mention remaining packages or why the scope was kept together.
+Call out important related changes left unstaged. Put any optional question last.
+
+Give substantive changes a concise commit subject and a short
 body documenting the problem or trigger, why this approach was chosen, and any established
 tradeoffs, so a future reader can reconstruct the decision. Start with the established
 reason, then explain how the package addresses it; do not substitute a diff summary
@@ -150,16 +148,14 @@ is redundant. Remove it to avoid maintaining the extra dependency.
 
 ## Review an existing scope
 
-For a full-scope review, keep the selected Git state unchanged. Show the exact range,
-paths, or staged diff being reviewed, then inspect it without staging, editing, committing,
-or splitting it into packages. Apply the same review agenda, evidence-backed findings,
-proportional validation, and comprehension check. Do not allow `next` to commit a
-full-scope review unless the user explicitly asks to prepare a staged package first.
+For a full-scope review, inspect the selected range, paths, or staged diff without
+staging, editing, committing, or splitting it into packages. Use the same review
+and validation guidance. Do not allow `next` to commit a full-scope review unless
+the user explicitly asks to prepare a staged package first.
 
-## Build a review agenda
+## Choose a review focus
 
-Before inspecting details, state a short, change-specific agenda. Select only relevant
-lenses from this list:
+Focus on the aspects relevant to the change:
 
 - **Intent and value:** Confirm that the change addresses the stated problem and that
   its operational or maintenance cost is justified.
@@ -176,9 +172,8 @@ lenses from this list:
   lock out, expose data, alter network access, send content to an external tool, or
   affect production state.
 
-Do not assume that an idea is worthwhile merely because it is already implemented. Do
-not turn every review into a generic security audit; adapt the agenda to the actual
-change.
+Evaluate whether the implementation is worthwhile. Apply security review where
+the actual change warrants it.
 
 ## Review only the selected scope
 
@@ -201,8 +196,10 @@ that should stop the package. Use `SHOULD-FIX` for material bugs or design probl
 Use `NIT` for optional clarity or style improvements. Report “no findings in the
 reviewed scope” rather than declaring the package universally approved.
 
-Separate observations from decisions. Do not make the user’s product, architecture,
-or risk acceptance decision on their behalf.
+Separate observations from decisions. Report unresolved decisions in the
+findings and leave product, architecture, and risk acceptance decisions to the
+user. If a disputed contract determines whether the package is correct, flag it
+as a `BLOCKER` and ask which contract to implement.
 
 ## Validate proportionally
 
@@ -232,90 +229,80 @@ or risk acceptance decision on their behalf.
   If it passes, report the likely isolation problem and suggest a separate hook/runner
   fix; otherwise diagnose the failure. Change hooks or runners only when requested.
 - Never apply production or remote configuration merely to validate a package.
-- Report commands, outcomes, checked state, reused results and why they apply, and
+- Record commands, outcomes, checked state, reused results and why they apply, and
   remaining gaps. Distinguish local, synthetic, unavailable, and deployment evidence.
 
-For a prepared package, record and show the base commit (or unborn branch for an
+For a prepared package, record the base commit (or unborn branch for an
 initial commit) and full index tree after final validation as the staged fingerprint.
 Use `git --no-pager rev-parse --verify HEAD` for an existing base and
 `git --no-pager write-tree` for the tree. A diff hash alone does not identify the
 complete staged snapshot. If the base or tree changes, review the delta and renew
-affected validation and comprehension evidence before allowing `next`; retain
-evidence for unaffected checks.
+affected validation before allowing `next`. Retain evidence for unaffected checks.
 
-## Check practical understanding
+## Discuss changes people will notice
 
-In the review summary, use `$explain` to present the material before/after
-consequences. If `$explain` cannot be loaded, write the explanation in plain
-technical language inspired by ASD-STE100. Use short sentences, consistent terms,
-and explicit causes and consequences. Then follow the comprehension check below.
+Use `$explain` for a hard-to-follow before/after consequence. Ground it in a task
+the user performs, such as using a shortcut, handling a changed default, or
+recovering from a failed deploy.
 
-For a non-obvious change, show one concrete scenario that explains what happened
-before, why the change affects that path, and what the caller observes after.
-Check whether the user can predict how the change affects use, configuration,
-compatibility, or failure handling. Use “package” for a prepared package and
-“scope” for a full review.
+If `$explain` is unavailable, explain in plain technical language and follow
+ASD-STE100 for English.
 
-Ask only about material gaps not already resolved by the conversation. Use concrete
-scenarios and accept brief answers. If the explanation already gives the answer,
-check whether the user can apply it in a different scenario. Do not set a question
-quota or quiz unchanged rules, implementation trivia, or the agent's package choices
-unless they have material consequences. Rephrase unclear questions before assessing
-the answer.
+Offer one optional question when a package materially changes how someone uses,
+configures, or operates the system and their answer could reveal a preference or
+misunderstanding that matters to that workflow. Reuse decisions already made in
+the conversation. For tests, formatting, documentation cleanup, and internal
+refactors with unchanged user-facing behavior, summarize the impact and omit the
+question.
 
-When earlier replies demonstrate understanding of the reviewed change, cite that
-evidence instead of asking again. This completes the comprehension check, not
-commit approval.
+Close the question if the user declines to answer. If the user misunderstands
+the consequence or asks for help, explain it once without another question.
+An optional question never gates a commit.
 
-After the comprehension check, report a short result:
+## Review one staged package in auto
 
-```text
-Zrozumienie: wystarczające | wymaga doprecyzowania
+Inspect the index first. Review one coherent staged package as-is against its intended
+behavior and any scope the user supplied. If the index is empty, mixed or outside that
+scope, propose one concrete package from the available changes and wait before staging.
+If there are no changes, report that and stop. Treat a scope supplied to `auto` as a
+constraint on the staged package. Use `prepared_package` for that package. Honor an
+explicit request for read-only full-scope review instead.
 
-Dobrze rozumiane:
-- ...
+Review and validate the package yourself. Give one independent read-only subagent the
+staged diff, fingerprint, user scope, intended behavior, relevant context and check results.
+Withhold your own findings on its first pass. Ask for evidence of failures, lost
+coverage, missing prerequisites or scope violations, and its verdict on that fingerprint.
 
-Do doprecyzowania:
-- ...
-```
+Check each material objection against the diff, contract or a focused run. Give the
+reviewer your evidence if you disagree. Report `READY` only when required checks
+pass and both agents accept the same fingerprint against a clear criterion.
+Otherwise report `HOLD` with the concrete objection or missing evidence, your
+assessment and what would resolve it. A missing reviewer also means `HOLD`.
 
-If a message contains explicit commit approval and understanding is sufficient,
-report the result and continue through the commit gate in the same turn. Do
-not pause for duplicate confirmation. If understanding is insufficient, do not carry
-that approval forward to a later clarification.
-
-If understanding is insufficient, explain the gap plainly and ask only the smallest
-follow-up needed. Do not keep asking indefinitely. If an answer proposes a code or
-scope change, state that it is a separate decision and wait for explicit authorization
-before editing or restaging. Treat understanding as insufficient when a material
-gap in understanding the change’s purpose or consequences remains unresolved.
-Record minor nonessential unknowns separately, but do not use risk acceptance to
-convert a material understanding gap into a passing result. If the user declines
-this gate, do not commit under this workflow.
+End the invocation with the verdict and a brief review summary. Leave the package
+staged for the user. If the base or index changes, renew both reviews and affected
+checks and present the new verdict before asking for approval.
 
 ## Gate commits and the next package
 
-Keep the prepared package staged until understanding is sufficient and the user
-explicitly approves committing; allow replies and approval in the same message.
-Apply this commit gate only in `prepared_package` mode and for an explicit commit
-or `next` request; keep `full_scope` review read-only. Allow a package commit only
-when all of these conditions hold:
+Apply this gate only in `prepared_package` mode. Keep `full_scope` read-only.
+Allow a local commit only when all of these conditions hold:
 
 - the review mode is explicitly `prepared_package`;
 - the index contains exactly one coherent selected package and no known unrelated changes;
 - the current staged diff is the one that was reviewed and validated;
 - the base (including unborn state) and full index tree match the fingerprint recorded after final
   validation in this review session (recompute both immediately before committing);
-- the current conversation contains a review for that exact staged diff and sufficient
-  comprehension evidence under the check above; report the understanding result
-  in the same turn before or alongside the commit outcome;
-- after receiving the findings, validation result, staged fingerprint, and comprehension
-  check, the user explicitly says to commit or invokes `$guided-review next`; allow
-  that request to accompany replies, but do not count approval given before those
-  materials or unrelated blanket authorization;
+- the current conversation contains a review for that exact staged diff;
+- for an `auto` package, the latest verdict reported to the user for that fingerprint is `READY`;
+- after receiving the review, validation, fingerprint and any required verdict,
+  the user explicitly approves committing that package (for example, with `next`);
 - no unresolved `BLOCKER` finding remains, or the user explicitly acknowledges and
   rejects that finding;
 - `git diff --cached --check` passes.
+
+If approval arrives early, present the review, validation, and fingerprint and
+wait for fresh approval.
 
 Before committing, finalize the displayed draft using the commit-message rules
 above, check it against the staged diff, and apply any user-requested wording
@@ -324,13 +311,11 @@ Show the resulting commit and worktree status, never push implicitly, then autom
 select and prepare the next package in the same turn when `next` was requested.
 
 If the user asks to change the implementation after the review, update the package
-explicitly, restage only its intended scope, and rerun the review and comprehension
-check. Do not use the comprehension check as a hidden requirements-gathering mechanism.
+explicitly, restage only its intended scope, and rerun the affected review and validation.
 
 ## Run a manual second opinion
 
-Keep this path opt-in. Do not start a subagent or call an external MCP reviewer during
-the normal package flow.
+Keep this path opt-in. Use a reviewer only for an explicit second opinion or `auto`.
 
 When the user invokes `$guided-review second-opinion` without naming a source, ask for
 one of:
@@ -360,14 +345,13 @@ then compare:
 - decisions required from the user.
 
 Do not merge a second opinion into the code automatically. If it introduces a material
-new issue, ask only delta comprehension questions. Treat a changed selected scope as
-making both opinions stale.
+new issue, apply the optional-question rule only to the new finding. Treat a
+changed selected scope as making both opinions stale.
 
 ## Explain without editing
 
-For `$guided-review explain` and natural follow-ups such as “why?”, use `$explain`
-and the same fallback as in the [review summary](#check-practical-understanding).
-Explain the point the user asked about within the current selected scope. Resume
-the understanding check only if it was already in progress and incomplete
-when the user asked. Otherwise, stop after the explanation. Do not edit, restage,
-commit, or reinterpret the user’s answer as approval.
+For `$guided-review explain` and natural follow-ups such as “why?”, use
+`$explain` or the [fallback above](#discuss-changes-people-will-notice).
+Answer the point the user asked about. Stop after the explanation unless that
+message also contains an explicit commit or `next` request. Apply the normal
+commit gates to that request. Keep the explanation read-only.
