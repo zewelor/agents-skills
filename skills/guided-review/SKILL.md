@@ -40,7 +40,8 @@ Interpret these commands and their natural-language equivalents as follows:
 | --- | --- |
 | `$guided-review` | Detect the relevant change scope, automatically decide whether it can be split, stage the next coherent package when needed, self-review it, validate it, and explain practical consequences. Review an explicitly supplied full scope without changing Git state. |
 | `$guided-review next` | Approve the current package. If the [commit gate](#gate-commits-and-the-next-package) passes, commit it and prepare the next chunk in the same turn. |
-| `$guided-review auto [scope]` | Run [two reviews of one staged package](#review-one-staged-package-in-auto) and report its readiness. |
+| `$guided-review auto [scope]` | Prepare one coherent package if the index is empty, run [two reviews of the staged package](#review-one-staged-package-in-auto), and report its readiness. |
+| `$guided-review auto $adversarial-review` | Use the explicitly invoked adversarial review as the independent review of the staged package. |
 | `$guided-review second-opinion` | Run a manually requested independent review using a source selected by the user. |
 | `$guided-review explain` | Explain a selected part of the current scope or produce a concrete scenario/counterexample without changing code. |
 
@@ -178,9 +179,10 @@ the actual change warrants it.
 ## Review only the selected scope
 
 Inspect only the selected diff and the minimum surrounding context needed to understand
-it. For an automatically prepared package, use `git diff --cached` and keep unrelated
-worktree changes out of findings. For a full-scope review, use the user-provided range,
-paths, or staged diff without expanding it. Use evidence-backed findings with this shape:
+it. For a staged review, use `git diff --cached` and read relevant code, including
+unchanged dependencies, from the same index tree. Give any independent reviewer
+context from that tree. For a full-scope review, respect the user-provided range or
+paths. Use evidence-backed findings with this shape:
 
 ```text
 **[BLOCKER|SHOULD-FIX|NIT]** path:line — short description
@@ -261,23 +263,37 @@ An optional question never gates a commit.
 
 ## Review one staged package in auto
 
-Inspect the index first. Review one coherent staged package as-is against its intended
-behavior and any scope the user supplied. If the index is empty, mixed or outside that
-scope, propose one concrete package from the available changes and wait before staging.
-If there are no changes, report that and stop. Treat a scope supplied to `auto` as a
-constraint on the staged package. Use `prepared_package` for that package. Honor an
-explicit request for read-only full-scope review instead.
+Honor an explicit request for read-only full-scope review. Treat any scope supplied to
+`auto` as a constraint on the package. Inspect the index first:
 
-Review and validate the package yourself. Give one independent read-only subagent the
-staged diff, fingerprint, user scope, intended behavior, relevant context and check results.
+- If the index is empty, use [Prepare the selected package](#prepare-the-selected-package)
+  to select and stage one coherent package from eligible worktree changes, then continue
+  the review in the same turn. If the requested scope contains no changes (including an
+  explicitly staged-only scope with an empty index), report that and stop.
+- If the index already contains one coherent package in scope, adopt it as-is.
+- If the index is mixed or outside the requested scope, propose one concrete package
+  and wait for approval before rebuilding the index.
+
+Use `prepared_package` for the selected package.
+
+Review and validate the package yourself. [Select one reviewer](#select-an-independent-reviewer).
+When the user also invokes `$adversarial-review`, use that skill with the same
+reviewer and staged fingerprint.
+If the requested skill is unavailable or the selected review cannot run,
+report `HOLD`.
+
+Give the independent reviewer the staged diff, fingerprint, user scope, intended
+behavior, relevant context and check results within the approved disclosure scope.
 Withhold your own findings on its first pass. Ask for evidence of failures, lost
-coverage, missing prerequisites or scope violations, and its verdict on that fingerprint.
+coverage, missing prerequisites or scope violations, and its verdict on that
+fingerprint.
 
 Check each material objection against the diff, contract or a focused run. Give the
-reviewer your evidence if you disagree. Report `READY` only when required checks
-pass and both agents accept the same fingerprint against a clear criterion.
+reviewer your evidence if you disagree. Report `READY` only when required checks pass,
+the independent reviewer has assessed every material acceptance criterion, and both
+agents accept the same fingerprint.
 Otherwise report `HOLD` with the concrete objection or missing evidence, your
-assessment and what would resolve it. A missing reviewer also means `HOLD`.
+assessment and what would resolve it.
 
 End the invocation with the verdict and a brief review summary. Leave the package
 staged for the user. If the base or index changes, renew both reviews and affected
@@ -313,23 +329,21 @@ select and prepare the next package in the same turn when `next` was requested.
 If the user asks to change the implementation after the review, update the package
 explicitly, restage only its intended scope, and rerun the affected review and validation.
 
+## Select an independent reviewer
+
+For `auto` or `second-opinion`, use the reviewer the user selected for this review.
+Otherwise ask “Codex subagent or AGY reviewer?” and wait for the choice.
+For Codex, use a read-only subagent. For AGY, invoke `$agy:reviewer` in the
+target repository and honor any explicit sharing limits.
+
 ## Run a manual second opinion
 
-Keep this path opt-in. Use a reviewer only for an explicit second opinion or `auto`.
-
-When the user invokes `$guided-review second-opinion` without naming a source, ask for
-one of:
-
-1. a local read-only subagent;
-2. a named agent or MCP tool;
-3. a review report supplied by the user;
-4. cancellation.
-
-Honor an explicitly named available source. If it is unavailable, report that fact and
+[Select one reviewer](#select-an-independent-reviewer). Also accept a named tool,
+a supplied review report, or cancellation when requested. If it is unavailable, report that fact and
 ask whether to use another source; do not silently substitute one. Give a local
 subagent only the selected diff and necessary context (the staged diff for a prepared
 package),
-and instruct it not to edit files, commit, push, or publish a verdict. For an external
+and instruct it not to edit files, commit, push, or publish a verdict. For another external
 MCP or service, show the exact data scope before sending it and obtain confirmation;
 accept an explicit instruction such as “send this diff to MCP X” as that confirmation,
 but do not treat naming a tool alone as consent to disclose the diff. Redact secrets and
